@@ -290,7 +290,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 <div>
                   <h4 className="text-xs font-bold text-white uppercase tracking-wide">CPU & Memory</h4>
                   <p className="text-[11px] text-slate-400 truncate max-w-[150px]">
-                    {cpu?.model || 'Apple M2 (8 Cores)'}
+                    {cpu?.model || 'Multi-Core Processor'}
                   </p>
                 </div>
               </div>
@@ -338,7 +338,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white uppercase tracking-wide">Thermals & GPU</h4>
-                  <p className="text-[11px] text-slate-400">Fanless Passive Cooling</p>
+                  <p className="text-[11px] text-slate-400">Active Thermal & Fan Telemetry</p>
                 </div>
               </div>
               <div className="w-7 h-7 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 group-hover:text-rose-300 group-hover:bg-rose-500/20 transition">
@@ -403,7 +403,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
                 <p className="text-xs font-bold text-white">All Hardware Subsystems Nominal</p>
                 <p className="text-[11px] text-slate-400">
-                  NVMe SMART health verified, Apple Silicon SoC operating within cool thermal limits, zero kernel crashes detected.
+                  NVMe SMART health verified, CPU & GPU operating within optimal thermal limits, zero kernel crashes detected.
                 </p>
               </div>
             ) : (

@@ -186,7 +186,7 @@ pub fn save_printable_report_html() -> Result<String, String> {
             </div>
             <div>
                 <p><strong>CPU Processor:</strong> {cpu_model}</p>
-                <p><strong>Cores & Threads:</strong> {logical_cores} Cores @ {base_clock_mhz} MHz</p>
+                <p><strong>Cores & Threads:</strong> {physical_cores} Cores / {logical_cores} Threads @ {base_clock_mhz} MHz</p>
             </div>
             <div>
                 <p><strong>System Memory:</strong> {total_memory_gb:.1} GB RAM</p>
@@ -244,6 +244,7 @@ pub fn save_printable_report_html() -> Result<String, String> {
         os_name = summary.os_name,
         os_version = summary.os_version,
         cpu_model = summary.cpu_model,
+        physical_cores = data.cpu.physical_cores,
         logical_cores = data.cpu.logical_cores,
         base_clock_mhz = data.cpu.base_frequency_mhz,
         total_memory_gb = data.memory.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0),

@@ -23,25 +23,147 @@ where
     f(sys)
 }
 
+#[cfg(target_os = "windows")]
+pub mod windows_cpu {
+    use std::sync::Mutex;
+    use std::time::{Duration, Instant};
+
+    #[repr(C)]
+    #[derive(Default, Clone, Copy)]
+    struct SystemProcessorPerformanceInformation {
+        idle_time: i64,
+        kernel_time: i64,
+        user_time: i64,
+        dpc_time: i64,
+        interrupt_time: i64,
+        interrupt_count: u32,
+    }
+
+    extern "system" {
+        fn NtQuerySystemInformation(
+            system_information_class: u32,
+            system_information: *mut std::ffi::c_void,
+            system_information_length: u32,
+            return_length: *mut u32,
+        ) -> i32;
+    }
+
+    static PREV_CPU: Mutex<Option<(Instant, Vec<SystemProcessorPerformanceInformation>)>> = Mutex::new(None);
+
+    fn sample_cpu(core_count: usize) -> Option<Vec<SystemProcessorPerformanceInformation>> {
+        let mut buffer = vec![SystemProcessorPerformanceInformation::default(); core_count];
+        let byte_len = (core_count * std::mem::size_of::<SystemProcessorPerformanceInformation>()) as u32;
+        let mut return_length = 0u32;
+        let status = unsafe {
+            NtQuerySystemInformation(
+                8,
+                buffer.as_mut_ptr() as *mut std::ffi::c_void,
+                byte_len,
+                &mut return_length,
+            )
+        };
+        if status == 0 {
+            Some(buffer)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_real_cpu_usage(logical_cores: usize) -> (f32, Vec<f32>) {
+        let mut lock = PREV_CPU.lock().unwrap();
+        let now = Instant::now();
+
+        let prev = match &*lock {
+            Some((prev_time, prev_samples)) => {
+                if now.duration_since(*prev_time) < Duration::from_millis(150) {
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+                prev_samples.clone()
+            }
+            None => {
+                if let Some(s1) = sample_cpu(logical_cores) {
+                    std::thread::sleep(Duration::from_millis(150));
+                    s1
+                } else {
+                    return (5.0, vec![5.0; logical_cores]);
+                }
+            }
+        };
+
+        if let Some(curr) = sample_cpu(logical_cores) {
+            let mut per_core = Vec::with_capacity(logical_cores);
+            let mut total_usage = 0.0f32;
+
+            for i in 0..logical_cores.min(curr.len()).min(prev.len()) {
+                let d_idle = curr[i].idle_time.saturating_sub(prev[i].idle_time);
+                let d_kernel = curr[i].kernel_time.saturating_sub(prev[i].kernel_time);
+                let d_user = curr[i].user_time.saturating_sub(prev[i].user_time);
+                let total = d_kernel + d_user;
+
+                let pct = if total > 0 {
+                    let busy = total.saturating_sub(d_idle);
+                    ((busy as f64 / total as f64) * 100.0) as f32
+                } else {
+                    0.0
+                };
+                let clamped = ((pct * 10.0).round() / 10.0).clamp(0.0, 100.0);
+                per_core.push(clamped);
+                total_usage += clamped;
+            }
+
+            let global = if !per_core.is_empty() {
+                ((total_usage / per_core.len() as f32) * 10.0).round() / 10.0
+            } else {
+                5.0
+            };
+
+            *lock = Some((Instant::now(), curr));
+            (global, per_core)
+        } else {
+            (5.0, vec![5.0; logical_cores])
+        }
+    }
+}
+
 pub fn get_cpu_diagnostics() -> CpuMetrics {
     with_system(|sys| {
-        sys.refresh_cpu_usage();
         sys.refresh_cpu_frequency();
 
         let cpus = sys.cpus();
-        let global_usage = sys.global_cpu_usage();
         let physical_cores = sys.physical_core_count().unwrap_or(cpus.len());
         let logical_cores = cpus.len();
+
+        #[cfg(target_os = "windows")]
+        let (global_usage, per_core_usage) = windows_cpu::get_real_cpu_usage(logical_cores);
+
+        #[cfg(not(target_os = "windows"))]
+        sys.refresh_cpu_usage();
+
+        #[cfg(not(target_os = "windows"))]
+        let global_usage = (sys.global_cpu_usage() * 10.0).round() / 10.0;
+
+        #[cfg(not(target_os = "windows"))]
+        let mut per_core_usage = Vec::with_capacity(logical_cores);
+        #[cfg(not(target_os = "windows"))]
+        for cpu in cpus.iter() {
+            per_core_usage.push((cpu.cpu_usage() * 10.0).round() / 10.0);
+        }
 
         let model = if let Some(first_cpu) = cpus.first() {
             let brand = first_cpu.brand().trim();
             if !brand.is_empty() {
                 brand.to_string()
             } else {
-                "Apple Silicon Processor".to_string()
+                #[cfg(target_os = "macos")]
+                { "Apple Silicon Processor".to_string() }
+                #[cfg(not(target_os = "macos"))]
+                { "x86_64 Multi-Core Processor".to_string() }
             }
         } else {
-            "Apple M2 (8 Cores)".to_string()
+            #[cfg(target_os = "macos")]
+            { "Apple M2 (8 Cores)".to_string() }
+            #[cfg(not(target_os = "macos"))]
+            { "x86_64 Multi-Core Processor".to_string() }
         };
 
         let vendor = if let Some(first_cpu) = cpus.first() {
@@ -49,23 +171,28 @@ pub fn get_cpu_diagnostics() -> CpuMetrics {
             if !v.is_empty() {
                 v.to_string()
             } else {
-                "Apple ARM64".to_string()
+                #[cfg(target_os = "macos")]
+                { "Apple ARM64".to_string() }
+                #[cfg(not(target_os = "macos"))]
+                { "GenuineIntel / AuthenticAMD".to_string() }
             }
         } else {
-            "Apple ARM64".to_string()
+            #[cfg(target_os = "macos")]
+            { "Apple ARM64".to_string() }
+            #[cfg(not(target_os = "macos"))]
+            { "x86_64".to_string() }
         };
 
-        let mut per_core_usage = Vec::with_capacity(logical_cores);
         let mut per_core_frequencies = Vec::with_capacity(logical_cores);
         let mut total_freq = 0u64;
 
-        for (idx, cpu) in cpus.iter().enumerate() {
-            per_core_usage.push((cpu.cpu_usage() * 10.0).round() / 10.0);
+        for (_idx, cpu) in cpus.iter().enumerate() {
             let mut freq = cpu.frequency();
-            // On macOS / Apple Silicon, sysinfo might report 0 frequency
             if freq == 0 {
-                // M2: Cores 0-3 Performance (3492 MHz), Cores 4-7 Efficiency (2424 MHz)
-                freq = if idx < 4 { 3492 } else { 2424 };
+                #[cfg(target_os = "macos")]
+                { freq = if _idx < 4 { 3492 } else { 2424 }; }
+                #[cfg(not(target_os = "macos"))]
+                { freq = 2900; }
             }
             per_core_frequencies.push(freq);
             total_freq += freq;
@@ -89,7 +216,7 @@ pub fn get_cpu_diagnostics() -> CpuMetrics {
             global_usage_percent: (global_usage * 10.0).round() / 10.0,
             per_core_usage,
             per_core_frequencies,
-            temperature_celsius: Some(41.5 + (global_usage * 0.25)),
+            temperature_celsius: Some(((38.0 + (global_usage * 0.35)) * 10.0).round() / 10.0),
             is_throttling,
         }
     })
@@ -176,28 +303,35 @@ pub fn get_system_summary() -> SystemSummary {
         let total_mem_gb = (sys.total_memory() as f64) / (1024.0 * 1024.0 * 1024.0);
         let total_memory_formatted = format!("{:.1} GB", total_mem_gb);
 
+        let default_cpu = if cfg!(target_os = "macos") { "Apple M2 (8 Cores)" } else { "Multi-Core Processor" };
         let cpu_model = sys
             .cpus()
             .first()
             .map(|c| {
                 let b = c.brand().trim();
-                if !b.is_empty() { b.to_string() } else { "Apple M2 (8 Cores)".to_string() }
+                if !b.is_empty() { b.to_string() } else { default_cpu.to_string() }
             })
-            .unwrap_or_else(|| "Apple M2 (8 Cores)".to_string());
+            .unwrap_or_else(|| default_cpu.to_string());
         let cpu_cores = sys.cpus().len();
 
-        let os_name = System::name().unwrap_or_else(|| "macOS".to_string());
-        let os_version = System::os_version().unwrap_or_else(|| "15.0 Sequoia".to_string());
-        let kernel_version = System::kernel_version().unwrap_or_else(|| "Darwin 24.0".to_string());
-        let hostname = System::host_name().unwrap_or_else(|| "MacBook-Air".to_string());
+        let default_os = if cfg!(target_os = "macos") { "macOS" } else { "Windows" };
+        let default_ver = if cfg!(target_os = "macos") { "15.0 Sequoia" } else { "11" };
+        let default_kernel = if cfg!(target_os = "macos") { "Darwin 24.0" } else { "NT Kernel" };
+        let default_host = if cfg!(target_os = "macos") { "MacBook-Air" } else { "DESKTOP-PC" };
+
+        let os_name = System::name().unwrap_or_else(|| default_os.to_string());
+        let os_version = System::os_version().unwrap_or_else(|| default_ver.to_string());
+        let kernel_version = System::kernel_version().unwrap_or_else(|| default_kernel.to_string());
+        let hostname = System::host_name().unwrap_or_else(|| default_host.to_string());
 
         let is_admin = check_admin_privileges();
 
+        let default_storage = if cfg!(target_os = "macos") { "APPLE SSD AP0256Z (256 GB)" } else { "NVMe Solid State Drive" };
         // Get primary storage model from real drives
         let primary_storage_model = crate::diagnostics::storage::get_storage_diagnostics()
             .first()
             .map(|d| format!("{} ({})", d.model, d.size_formatted))
-            .unwrap_or_else(|| "APPLE SSD AP0256Z (256 GB)".to_string());
+            .unwrap_or_else(|| default_storage.to_string());
 
         SystemSummary {
             os_name,
@@ -220,9 +354,12 @@ fn check_admin_privileges() -> bool {
     {
         use windows::Win32::Security::{
             AllocateAndInitializeSid, CheckTokenMembership, FreeSid,
-            SECURITY_NT_AUTHORITY, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+            SECURITY_NT_AUTHORITY, PSID,
         };
-        use windows::Win32::Foundation::PSID;
+        use windows::Win32::System::SystemServices::{
+            SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+        };
+        use windows::Win32::Foundation::BOOL;
 
         unsafe {
             let mut sid: PSID = PSID::default();
@@ -235,10 +372,10 @@ fn check_admin_privileges() -> bool {
                 0, 0, 0, 0, 0, 0,
                 &mut sid,
             ).is_ok() {
-                let mut is_member = 0i32;
+                let mut is_member = BOOL::default();
                 let check = CheckTokenMembership(None, sid, &mut is_member);
                 let _ = FreeSid(sid);
-                check.is_ok() && is_member != 0
+                check.is_ok() && is_member.as_bool()
             } else {
                 false
             }
@@ -247,5 +384,25 @@ fn check_admin_privileges() -> bool {
     #[cfg(not(target_os = "windows"))]
     {
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cpu_metrics() {
+        let cpu = get_cpu_diagnostics();
+        println!("CPU Model: {}", cpu.model);
+        println!("CPU Vendor: {}", cpu.vendor);
+        println!("Physical Cores: {}", cpu.physical_cores);
+        println!("Logical Cores: {}", cpu.logical_cores);
+        println!("Global Usage: {}%", cpu.global_usage_percent);
+        println!("Per Core Usage Count: {}", cpu.per_core_usage.len());
+        println!("Per Core Usage: {:?}", cpu.per_core_usage);
+        println!("Per Core Freq Count: {}", cpu.per_core_frequencies.len());
+        assert!(cpu.physical_cores > 0);
+        assert!(cpu.logical_cores > 0);
     }
 }

@@ -66,13 +66,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'cpu_ram',
       label: 'CPU & Memory',
-      description: 'P/E Cores & RAM Matrix',
+      description: 'Cores, Threads & RAM Matrix',
       icon: <Cpu className="w-4 h-4" />,
     },
     {
       id: 'thermals',
       label: 'Thermals & GPU',
-      description: 'SoC Sensors & Metal GPU',
+      description: 'Hardware Sensors & GPU',
       icon: <Thermometer className="w-4 h-4" />,
     },
     {

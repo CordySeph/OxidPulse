@@ -62,7 +62,7 @@ export const CpuMemoryView: React.FC<CpuMemoryViewProps> = ({
 
         <div className="flex items-center space-x-3">
           <div className="px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700/60 text-xs font-mono font-bold text-slate-200">
-            {cpu.physical_cores} Physical / {cpu.logical_cores} Logical Cores
+            {cpu.physical_cores} Cores / {cpu.logical_cores} Threads
           </div>
           <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
             Full Speed (Unthrottled)
@@ -90,7 +90,7 @@ export const CpuMemoryView: React.FC<CpuMemoryViewProps> = ({
             <div>
               <div className="text-sm font-bold text-white">{cpu.model}</div>
               <div className="text-xs text-slate-400 font-mono mt-0.5">
-                Architecture: {cpu.vendor} (4 Performance + 4 Efficiency Cores)
+                Vendor: {cpu.vendor} • {cpu.physical_cores} Physical Cores / {cpu.logical_cores} Threads
               </div>
             </div>
             <div className="text-right">
@@ -105,13 +105,19 @@ export const CpuMemoryView: React.FC<CpuMemoryViewProps> = ({
           <div>
             <div className="flex justify-between text-xs text-slate-400 font-mono mb-3">
               <span>Core Activity Heatmap</span>
-              <span>8 Threads Active</span>
+              <span>{cpu.logical_cores} Threads Active</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
               {cpu.per_core_usage.map((usage, idx) => {
                 const freq = cpu.per_core_frequencies[idx] || cpu.current_frequency_mhz;
-                const isPCore = idx < 4;
+                const threadsPerCore = Math.max(1, Math.round(cpu.logical_cores / Math.max(1, cpu.physical_cores)));
+                const coreNum = cpu.physical_cores > 0 ? Math.floor(idx / threadsPerCore) + 1 : idx + 1;
+                const threadNum = (idx % threadsPerCore) + 1;
+                const label = cpu.logical_cores > cpu.physical_cores 
+                  ? `Core ${coreNum} (T${threadNum})`
+                  : `Core ${idx + 1}`;
+
                 const heatColor =
                   usage > 80
                     ? 'bg-rose-500/25 text-rose-300 border-rose-500/50'
@@ -127,7 +133,7 @@ export const CpuMemoryView: React.FC<CpuMemoryViewProps> = ({
                     className={`p-3 rounded-xl border flex flex-col justify-between transition-all duration-300 ${heatColor}`}
                   >
                     <div className="flex justify-between items-center text-[10px] font-mono">
-                      <span className="font-bold">{isPCore ? `P-Core ${idx}` : `E-Core ${idx - 4}`}</span>
+                      <span className="font-bold text-slate-200">{label}</span>
                       <span className="opacity-75">{(freq / 1000).toFixed(2)}G</span>
                     </div>
 
@@ -137,7 +143,7 @@ export const CpuMemoryView: React.FC<CpuMemoryViewProps> = ({
 
                     <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${usage > 70 ? 'bg-rose-400' : isPCore ? 'bg-indigo-400' : 'bg-cyan-400'}`}
+                        className={`h-full rounded-full ${usage > 70 ? 'bg-rose-400' : usage > 40 ? 'bg-amber-400' : 'bg-cyan-400'}`}
                         style={{ width: `${Math.max(5, usage)}%` }}
                       />
                     </div>
@@ -201,8 +207,8 @@ export const CpuMemoryView: React.FC<CpuMemoryViewProps> = ({
           </div>
 
           <div className="text-xs text-slate-400 pt-3 border-t border-slate-800/60 flex items-center justify-between font-mono">
-            <span>Memory Topology:</span>
-            <span className="text-cyan-300 font-bold">128-bit Unified LPDDR5 Memory Bus</span>
+            <span>Memory Architecture:</span>
+            <span className="text-cyan-300 font-bold">{formatBytes(memory.total_bytes)} System RAM Architecture</span>
           </div>
         </div>
       </div>

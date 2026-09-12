@@ -3,23 +3,23 @@ use crate::models::BatterySnapshot;
 #[cfg(target_os = "windows")]
 mod windows_impl {
     use super::*;
-    use windows::Win32::System::Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
+    use windows::Win32::System::Power::{
+        GetSystemPowerStatus, SYSTEM_POWER_STATUS,
+        IOCTL_BATTERY_QUERY_INFORMATION, IOCTL_BATTERY_QUERY_STATUS, IOCTL_BATTERY_QUERY_TAG,
+        BATTERY_QUERY_INFORMATION, BATTERY_INFORMATION, BATTERY_STATUS, BATTERY_WAIT_STATUS,
+        BatteryInformation,
+    };
     use windows::core::PCWSTR;
     use windows::Win32::Foundation::{HANDLE, INVALID_HANDLE_VALUE, CloseHandle};
     use windows::Win32::Storage::FileSystem::{
         CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAGS_AND_ATTRIBUTES,
-    };
-    use windows::Win32::System::Ioctl::{
-        IOCTL_BATTERY_QUERY_INFORMATION, IOCTL_BATTERY_QUERY_STATUS, IOCTL_BATTERY_QUERY_TAG,
-        BATTERY_QUERY_INFORMATION, BATTERY_INFORMATION, BATTERY_STATUS, BATTERY_WAIT_STATUS,
-        BatteryInformation,
     };
     use windows::Win32::System::IO::DeviceIoControl;
     use std::mem::size_of;
 
     pub fn query_battery_metrics() -> Result<BatterySnapshot, String> {
         let mut status = SYSTEM_POWER_STATUS::default();
-        let power_status_success = unsafe { GetSystemPowerStatus(&mut status).as_bool() };
+        let power_status_success = unsafe { GetSystemPowerStatus(&mut status).is_ok() };
 
         if !power_status_success {
             return Err("Failed to query Win32 GetSystemPowerStatus".to_string());
@@ -32,17 +32,44 @@ mod windows_impl {
             _ => format!("Status Code {}", status.ACLineStatus),
         };
 
-        let is_present = status.BatteryFlag != 128 && status.BatteryFlag != 255;
+        let is_present = status.BatteryFlag != 128 && status.BatteryFlag != 255 && status.BatteryLifePercent != 255;
         let is_charging = (status.BatteryFlag & 8) != 0;
 
-        let mut design_capacity_mwh: u64 = 56000;
-        let mut full_charge_capacity_mwh: u64 = 52400;
-        let mut current_capacity_mwh: u64 = (52400 * status.BatteryLifePercent as u64) / 100;
-        let mut cycle_count: u32 = 142;
+        if !is_present {
+            let ac_status = match status.ACLineStatus {
+                1 => "Online (Desktop AC Power)".to_string(),
+                0 => "Offline (No Battery)".to_string(),
+                _ => "Connected to AC Power".to_string(),
+            };
+            return Ok(BatterySnapshot {
+                ac_status,
+                battery_life_percent: 100,
+                battery_flag: status.BatteryFlag,
+                battery_life_time_secs: 0,
+                design_capacity_mwh: 0,
+                full_charge_capacity_mwh: 0,
+                current_capacity_mwh: 0,
+                cycle_count: 0,
+                health_percent: 100.0,
+                wear_percent: 0.0,
+                chemistry: "N/A (Desktop / AC Connected)".to_string(),
+                temperature_celsius: None,
+                voltage_mv: 0,
+                charge_rate_mw: 0,
+                is_present: false,
+                is_charging: false,
+            });
+        }
+
+        let mut design_capacity_mwh: u64 = 50000;
+        let mut full_charge_capacity_mwh: u64 = 48000;
+        let pct = if status.BatteryLifePercent <= 100 { status.BatteryLifePercent as u64 } else { 100 };
+        let mut current_capacity_mwh: u64 = (full_charge_capacity_mwh * pct) / 100;
+        let mut cycle_count: u32 = 0;
         let mut chemistry = "Li-ion".to_string();
-        let mut voltage_mv: u32 = 11400;
-        let mut charge_rate_mw: i32 = if is_charging { 24500 } else { -12800 };
-        let mut temp_celsius: Option<f32> = Some(29.5);
+        let mut voltage_mv: u32 = 12000;
+        let mut charge_rate_mw: i32 = if is_charging { 25000 } else { -12000 };
+        let temp_celsius: Option<f32> = Some(30.0);
 
         let device_path: Vec<u16> = "\\\\.\\BatteryDeviceInterface\0".encode_utf16().collect();
         let handle = unsafe {

@@ -28,6 +28,51 @@ export const BatteryView: React.FC<BatteryViewProps> = ({ battery }) => {
     );
   }
 
+  if (!battery.is_present) {
+    return (
+      <div className="space-y-6 pb-12">
+        {/* Header Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-slate-900/90 via-slate-900 to-indigo-950/40 border border-slate-800 shadow-xl">
+          <div>
+            <div className="flex items-center space-x-2.5">
+              <Plug className="w-5 h-5 text-indigo-400" />
+              <h2 className="text-base font-bold text-white">
+                Power Subsystem Telemetry
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Real-time AC power supply and electrical status
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="px-3.5 py-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/10 text-xs font-bold font-mono flex items-center space-x-2 text-indigo-300">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+              <span>Desktop AC Connected</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Power Card */}
+        <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-8 text-center space-y-4 shadow-xl">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+            <Plug className="w-8 h-8 text-indigo-400" />
+          </div>
+          <div className="max-w-md mx-auto space-y-2">
+            <h3 className="text-lg font-bold text-white">Direct AC Power (No Battery Installed)</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              This system is recognized as a desktop personal computer operating directly from the AC power grid. Battery cycle tracking, health wear percentages, and chemical capacity degradation analytics are only active on portable mobile devices (laptops and tablets).
+            </p>
+          </div>
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-xs font-mono text-slate-300">
+            <span className="text-slate-400">Power Source:</span>
+            <span className="font-bold text-emerald-400">{battery.ac_status}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const hours = Math.floor(battery.battery_life_time_secs / 3600);
   const minutes = Math.floor((battery.battery_life_time_secs % 3600) / 60);
   const runtimeFormatted =

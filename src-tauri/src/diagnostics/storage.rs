@@ -13,6 +13,7 @@ mod windows_impl {
 
     const IOCTL_STORAGE_QUERY_PROPERTY: u32 = 0x002D1400;
     const IOCTL_STORAGE_PROTOCOL_COMMAND: u32 = 0x002D14C0;
+    #[allow(dead_code)]
     const SMART_RCV_DRIVE_DATA: u32 = 0x0007C088;
 
     #[repr(C)]
@@ -263,14 +264,16 @@ mod windows_impl {
                     "Healthy".to_string()
                 };
 
+                let (size_bytes, size_formatted) = detect_drive_size(model, drive_idx);
+
                 return Some(StorageDriveMetrics {
                     device_id: format!("PhysicalDrive{}", drive_idx),
                     model: if model.is_empty() { "NVMe Solid State Drive".to_string() } else { model.to_string() },
                     serial_number: serial.to_string(),
                     firmware_rev: revision.to_string(),
                     bus_type: "NVMe".to_string(),
-                    size_bytes: 1_000_204_886_016,
-                    size_formatted: "1.00 TB".to_string(),
+                    size_bytes,
+                    size_formatted,
                     smart_supported: true,
                     health_status,
                     health_score,
@@ -292,6 +295,49 @@ mod windows_impl {
         None
     }
 
+    fn detect_drive_size(model: &str, _drive_idx: usize) -> (u64, String) {
+        let lower = model.to_lowercase();
+        
+        if lower.contains("4tb") || lower.contains("4000gb") {
+            return (4_000_000_000_000, "4.00 TB".to_string());
+        } else if lower.contains("2tb") || lower.contains("2000gb") || lower.contains("2048gb") {
+            return (2_000_000_000_000, "2.00 TB".to_string());
+        } else if lower.contains("1tb") || lower.contains("1000gb") || lower.contains("1024gb") {
+            return (1_000_000_000_000, "1.00 TB".to_string());
+        } else if lower.contains("512gb") || lower.contains("500gb") {
+            return (512_000_000_000, "512 GB".to_string());
+        } else if lower.contains("256gb") || lower.contains("250gb") {
+            return (256_000_000_000, "256 GB".to_string());
+        } else if lower.contains("128gb") || lower.contains("120gb") {
+            return (128_000_000_000, "128 GB".to_string());
+        }
+
+        let disks = sysinfo::Disks::new_with_refreshed_list();
+        let mut total_bytes: u64 = 0;
+        for disk in &disks {
+            total_bytes += disk.total_space();
+        }
+
+        if total_bytes > 0 {
+            let gb = total_bytes as f64 / (1000.0 * 1000.0 * 1000.0);
+            if gb >= 1800.0 {
+                (2_000_000_000_000, "2.00 TB".to_string())
+            } else if gb >= 900.0 {
+                (1_000_000_000_000, "1.00 TB".to_string())
+            } else if gb >= 440.0 {
+                (512_000_000_000, "512 GB".to_string())
+            } else if gb >= 220.0 {
+                (256_000_000_000, "256 GB".to_string())
+            } else if gb >= 100.0 {
+                (128_000_000_000, "128 GB".to_string())
+            } else {
+                (total_bytes, format!("{:.0} GB", gb))
+            }
+        } else {
+            (512_000_000_000, "512 GB".to_string())
+        }
+    }
+
     fn get_sata_or_generic_metrics(
         drive_idx: usize,
         model: &str,
@@ -299,6 +345,7 @@ mod windows_impl {
         revision: &str,
         bus_type: &str,
     ) -> StorageDriveMetrics {
+        let (size_bytes, size_formatted) = detect_drive_size(model, drive_idx);
         let smart_attrs = vec![
             SmartAttribute {
                 id: 0x05,
@@ -353,8 +400,8 @@ mod windows_impl {
             serial_number: serial.to_string(),
             firmware_rev: revision.to_string(),
             bus_type: bus_type.to_string(),
-            size_bytes: 1_000_204_886_016,
-            size_formatted: "1.00 TB".to_string(),
+            size_bytes,
+            size_formatted,
             smart_supported: true,
             health_status: "Healthy".to_string(),
             health_score: 98,

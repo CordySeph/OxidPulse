@@ -67,7 +67,7 @@ export const StressTestView: React.FC<StressTestViewProps> = ({
                   HEAVY MULTI-CORE WORKLOAD ACTIVE
                 </h4>
                 <p className="text-xs text-slate-300 mt-0.5 font-mono">
-                  Saturating all 8 CPU execution threads ({selectedDuration}s)...
+                  Saturating all multi-core CPU execution threads ({selectedDuration}s)...
                 </p>
               </div>
             </div>
