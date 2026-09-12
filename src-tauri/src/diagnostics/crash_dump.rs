@@ -125,7 +125,7 @@ fn scan_windows_integrity_and_crashes() -> CrashDumpInfo {
         $events | ConvertTo-Json -Compress
     "#;
 
-    if let Ok(output) = std::process::Command::new("powershell")
+    if let Ok(output) = crate::diagnostics::silent_command("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", ps_script])
         .output()
     {
@@ -183,7 +183,7 @@ fn scan_windows_integrity_and_crashes() -> CrashDumpInfo {
         } | ConvertTo-Json -Compress
     "#;
 
-    if let Ok(output) = std::process::Command::new("powershell")
+    if let Ok(output) = crate::diagnostics::silent_command("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", pnp_script])
         .output()
     {

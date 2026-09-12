@@ -110,35 +110,35 @@ pub fn launch_windows_tool(tool: String) -> Result<String, String> {
     {
         match tool.as_str() {
             "reliability" => {
-                std::process::Command::new("powershell")
+                crate::diagnostics::silent_command("powershell")
                     .args(["-NoProfile", "-Command", "Start-Process perfmon.exe -ArgumentList '/rel'"])
                     .spawn()
                     .map_err(|e| e.to_string())?;
                 Ok("Launched Windows Reliability Monitor (perfmon /rel)".to_string())
             }
             "devmgmt" => {
-                std::process::Command::new("powershell")
+                crate::diagnostics::silent_command("powershell")
                     .args(["-NoProfile", "-Command", "Start-Process devmgmt.msc"])
                     .spawn()
                     .map_err(|e| e.to_string())?;
                 Ok("Launched Windows Device Manager (devmgmt.msc)".to_string())
             }
             "eventvwr" => {
-                std::process::Command::new("powershell")
+                crate::diagnostics::silent_command("powershell")
                     .args(["-NoProfile", "-Command", "Start-Process eventvwr.msc"])
                     .spawn()
                     .map_err(|e| e.to_string())?;
                 Ok("Launched Windows Event Viewer (eventvwr.msc)".to_string())
             }
             "mdsched" => {
-                std::process::Command::new("powershell")
+                crate::diagnostics::silent_command("powershell")
                     .args(["-NoProfile", "-Command", "Start-Process mdsched.exe"])
                     .spawn()
                     .map_err(|e| e.to_string())?;
                 Ok("Launched Windows Memory Diagnostic (mdsched.exe)".to_string())
             }
             "sfc" => {
-                std::process::Command::new("powershell")
+                crate::diagnostics::silent_command("powershell")
                     .args(["-NoProfile", "-Command", "Start-Process cmd -ArgumentList '/k sfc /scannow' -Verb RunAs"])
                     .spawn()
                     .map_err(|e| e.to_string())?;

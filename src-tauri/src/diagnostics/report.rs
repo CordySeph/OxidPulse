@@ -277,7 +277,7 @@ pub fn open_file_folder(path: &str) -> Result<(), String> {
         if p.exists() {
             if p.is_file() {
                 let cmd = format!("Start-Process explorer.exe -ArgumentList '/select,\"{}\"'", path.replace('/', "\\"));
-                let _ = std::process::Command::new("powershell")
+                let _ = crate::diagnostics::silent_command("powershell")
                     .args(["-NoProfile", "-Command", &cmd])
                     .spawn();
                 return Ok(());

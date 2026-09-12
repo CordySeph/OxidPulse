@@ -511,7 +511,7 @@ pub async fn run_gpu_ai_benchmark(duration_secs: Option<u64>) -> Result<GpuAiBen
     let mut live_fan_speed_rpm: Option<u32> = Some(1100);
 
     // Try executing nvidia-smi for ultra-precise NVIDIA telemetry
-    if let Ok(output) = std::process::Command::new("nvidia-smi")
+    if let Ok(output) = crate::diagnostics::silent_command("nvidia-smi")
         .args([
             "--query-gpu=name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,fan.speed",
             "--format=csv,noheader,nounits",
@@ -666,7 +666,7 @@ pub async fn run_gpu_ai_benchmark(duration_secs: Option<u64>) -> Result<GpuAiBen
         // Periodic telemetry sampling every ~500ms
         if last_sample_time.elapsed() >= Duration::from_millis(500) {
             last_sample_time = Instant::now();
-            if let Ok(output) = std::process::Command::new("nvidia-smi")
+            if let Ok(output) = crate::diagnostics::silent_command("nvidia-smi")
                 .args(["--query-gpu=temperature.gpu,power.draw", "--format=csv,noheader,nounits"])
                 .output()
             {
