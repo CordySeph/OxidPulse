@@ -6,3 +6,4 @@ pub mod stress;
 pub mod crash_dump;
 pub mod scoring;
 pub mod report;
+pub mod benchmark;

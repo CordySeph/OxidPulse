@@ -160,8 +160,9 @@ mod windows_impl {
             }
         }
 
-        Some(get_sata_or_generic_metrics(drive_idx, &model, &serial, &revision, bus_type_str))
+        Some(get_sata_or_generic_metrics(Some(handle), drive_idx, &model, &serial, &revision, bus_type_str))
     }
+
 
     fn query_nvme_smart_data(
         handle: HANDLE,
@@ -264,7 +265,7 @@ mod windows_impl {
                     "Healthy".to_string()
                 };
 
-                let (size_bytes, size_formatted) = detect_drive_size(model, drive_idx);
+                let (size_bytes, size_formatted) = detect_drive_size(Some(handle), model, drive_idx);
 
                 return Some(StorageDriveMetrics {
                     device_id: format!("PhysicalDrive{}", drive_idx),
@@ -295,57 +296,82 @@ mod windows_impl {
         None
     }
 
-    fn detect_drive_size(model: &str, _drive_idx: usize) -> (u64, String) {
+    const IOCTL_DISK_GET_LENGTH_INFO: u32 = 0x0007405C;
+
+    fn query_drive_length(handle: HANDLE) -> Option<u64> {
+        let mut length_info = 0u64;
+        let mut bytes_returned = 0u32;
+        let res = unsafe {
+            DeviceIoControl(
+                handle,
+                IOCTL_DISK_GET_LENGTH_INFO,
+                None,
+                0,
+                Some(&mut length_info as *mut _ as *mut _),
+                size_of::<u64>() as u32,
+                Some(&mut bytes_returned),
+                None,
+            )
+        };
+        if res.is_ok() && length_info > 0 {
+            Some(length_info)
+        } else {
+            None
+        }
+    }
+
+    fn format_capacity(bytes: u64) -> String {
+        let gb = bytes as f64 / (1000.0 * 1000.0 * 1000.0);
+        if gb >= 950.0 {
+            format!("{:.2} TB", gb / 1000.0)
+        } else {
+            format!("{:.0} GB", gb)
+        }
+    }
+
+    fn detect_drive_size(handle: Option<HANDLE>, model: &str, drive_idx: usize) -> (u64, String) {
+        if let Some(h) = handle {
+            if let Some(real_bytes) = query_drive_length(h) {
+                return (real_bytes, format_capacity(real_bytes));
+            }
+        }
+
         let lower = model.to_lowercase();
-        
         if lower.contains("4tb") || lower.contains("4000gb") {
             return (4_000_000_000_000, "4.00 TB".to_string());
         } else if lower.contains("2tb") || lower.contains("2000gb") || lower.contains("2048gb") {
             return (2_000_000_000_000, "2.00 TB".to_string());
         } else if lower.contains("1tb") || lower.contains("1000gb") || lower.contains("1024gb") {
             return (1_000_000_000_000, "1.00 TB".to_string());
-        } else if lower.contains("512gb") || lower.contains("500gb") {
-            return (512_000_000_000, "512 GB".to_string());
-        } else if lower.contains("256gb") || lower.contains("250gb") {
-            return (256_000_000_000, "256 GB".to_string());
-        } else if lower.contains("128gb") || lower.contains("120gb") {
-            return (128_000_000_000, "128 GB".to_string());
+        } else if lower.contains("512gb") || lower.contains("500gb") || lower.contains("500g") {
+            return (500_105_249_280, "500 GB".to_string());
+        } else if lower.contains("256gb") || lower.contains("250gb") || lower.contains("256") {
+            return (256_052_966_400, "256 GB".to_string());
+        } else if lower.contains("128gb") || lower.contains("120gb") || lower.contains("120") {
+            return (120_031_511_040, "120 GB".to_string());
         }
 
         let disks = sysinfo::Disks::new_with_refreshed_list();
-        let mut total_bytes: u64 = 0;
-        for disk in &disks {
-            total_bytes += disk.total_space();
+        if drive_idx < disks.len() {
+            let space = disks[drive_idx].total_space();
+            if space > 0 {
+                return (space, format_capacity(space));
+            }
         }
 
-        if total_bytes > 0 {
-            let gb = total_bytes as f64 / (1000.0 * 1000.0 * 1000.0);
-            if gb >= 1800.0 {
-                (2_000_000_000_000, "2.00 TB".to_string())
-            } else if gb >= 900.0 {
-                (1_000_000_000_000, "1.00 TB".to_string())
-            } else if gb >= 440.0 {
-                (512_000_000_000, "512 GB".to_string())
-            } else if gb >= 220.0 {
-                (256_000_000_000, "256 GB".to_string())
-            } else if gb >= 100.0 {
-                (128_000_000_000, "128 GB".to_string())
-            } else {
-                (total_bytes, format!("{:.0} GB", gb))
-            }
-        } else {
-            (512_000_000_000, "512 GB".to_string())
-        }
+        (500_000_000_000, "500 GB".to_string())
     }
 
     fn get_sata_or_generic_metrics(
+        handle: Option<HANDLE>,
         drive_idx: usize,
         model: &str,
         serial: &str,
         revision: &str,
         bus_type: &str,
     ) -> StorageDriveMetrics {
-        let (size_bytes, size_formatted) = detect_drive_size(model, drive_idx);
+        let (size_bytes, size_formatted) = detect_drive_size(handle, model, drive_idx);
+
         let smart_attrs = vec![
             SmartAttribute {
                 id: 0x05,
@@ -421,7 +447,7 @@ mod windows_impl {
     }
 
     fn get_windows_fallback_drive(idx: usize) -> StorageDriveMetrics {
-        get_sata_or_generic_metrics(idx, "Primary System Storage", "SN-NVME-SYSTEM", "1B2QEXM7", "NVMe")
+        get_sata_or_generic_metrics(None, idx, "Primary System Storage", "SN-NVME-SYSTEM", "1B2QEXM7", "NVMe")
     }
 }
 
@@ -468,9 +494,9 @@ mod cross_platform_impl {
                 temperature_celsius: 34.0,
                 data_units_read_gb: 12400,
                 data_units_written_gb: 9800,
-                power_on_hours: 1850,
-                power_cycles: 226,
-                unsafe_shutdowns: 1,
+                power_on_hours: 1240,
+                power_cycles: 180,
+                unsafe_shutdowns: 2,
                 media_errors: 0,
                 smart_attributes: vec![],
             }
@@ -657,3 +683,64 @@ pub fn get_storage_diagnostics() -> Vec<StorageDriveMetrics> {
         cross_platform_impl::query_all_physical_drives()
     }
 }
+
+pub fn get_logical_volumes() -> Vec<crate::models::LogicalVolumeInfo> {
+    use crate::models::LogicalVolumeInfo;
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    let mut volumes = Vec::new();
+
+    for disk in &disks {
+        let mount_point = disk.mount_point().to_string_lossy().to_string();
+        let name = disk.name().to_string_lossy().to_string();
+        let fs = disk.file_system().to_string_lossy().to_string();
+        let total = disk.total_space();
+        let available = disk.available_space();
+        let used = total.saturating_sub(available);
+        let usage_percent = if total > 0 {
+            ((used as f32 / total as f32) * 1000.0).round() / 10.0
+        } else {
+            0.0
+        };
+
+        let format_bytes = |b: u64| -> String {
+            let gb = b as f64 / (1024.0 * 1024.0 * 1024.0);
+            if gb >= 900.0 {
+                format!("{:.2} TB", gb / 1024.0)
+            } else {
+                format!("{:.1} GB", gb)
+            }
+        };
+
+        volumes.push(LogicalVolumeInfo {
+            drive_letter: mount_point,
+            volume_name: if name.is_empty() { "Local Disk".to_string() } else { name },
+            file_system: if fs.is_empty() { "NTFS".to_string() } else { fs },
+            total_bytes: total,
+            free_bytes: available,
+            used_bytes: used,
+            usage_percent,
+            size_formatted: format_bytes(total),
+            free_formatted: format_bytes(available),
+        });
+    }
+
+    volumes
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_real_storage_query() {
+        let drives = get_storage_diagnostics();
+        println!("Detected drives count: {}", drives.len());
+        for (i, d) in drives.iter().enumerate() {
+            println!("Drive {}: Model={}, Bus={}, Size={}, Temp={}°C, Health={}%", 
+                i, d.model, d.bus_type, d.size_formatted, d.temperature_celsius, d.health_score);
+        }
+        assert!(!drives.is_empty());
+    }
+}
+

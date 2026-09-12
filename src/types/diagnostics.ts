@@ -52,7 +52,29 @@ export interface StorageDriveMetrics {
   smart_attributes: SmartAttribute[];
 }
 
+export interface LogicalVolumeInfo {
+  drive_letter: string;
+  volume_name: string;
+  file_system: string;
+  total_bytes: number;
+  free_bytes: number;
+  used_bytes: number;
+  usage_percent: number;
+  size_formatted: string;
+  free_formatted: string;
+}
+
+export interface BenchmarkRecord {
+  id: string;
+  timestamp: string;
+  target_device: string;
+  benchmark_type: 'CPU' | 'Disk' | 'RAM' | 'Stress' | string;
+  score_summary: string;
+  detail_json: string;
+}
+
 export interface CpuMetrics {
+
   model: string;
   vendor: string;
   physical_cores: number;
@@ -218,3 +240,135 @@ export interface SystemHealthReport {
   generated_at: string;
   summary: SystemSummary;
 }
+
+export interface CpuReferenceComparison {
+  cpu_name: string;
+  single_core_score: number;
+  multi_core_score: number;
+  single_relative_percent: number;
+  multi_relative_percent: number;
+}
+
+export interface CpuBenchmarkResult {
+  cpu_model: string;
+  single_core_score: number;
+  multi_core_score: number;
+  multi_thread_ratio: number;
+  gflops: number;
+  duration_seconds: number;
+  threads_used: number;
+  initial_temp_celsius: number;
+  peak_temp_celsius: number;
+  reference_comparisons: CpuReferenceComparison[];
+  rating_tier: string;
+}
+
+export interface DiskSpeedTestResult {
+  drive_letter: string;
+  drive_model: string;
+  test_size_mb: number;
+  seq_read_mb_s: number;
+  seq_write_mb_s: number;
+  random_4k_read_mb_s: number;
+  random_4k_read_iops: number;
+  random_4k_write_mb_s: number;
+  random_4k_write_iops: number;
+  access_latency_ms: number;
+  drive_tier: string;
+}
+
+export interface RamBenchmarkResult {
+  read_speed_gb_s: number;
+  write_speed_gb_s: number;
+  latency_ns: number;
+  score: number;
+  tier: string;
+}
+
+export interface FullSystemBenchmarkResult {
+  cpu: CpuBenchmarkResult;
+  disk?: DiskSpeedTestResult;
+  ram: RamBenchmarkResult;
+  overall_pc_score: number;
+  tier_badge: string;
+}
+
+export interface PrecisionComputeThroughput {
+  precision: string;
+  tflops: number;
+  native_hardware_support: boolean;
+  acceleration_type: string;
+  typical_use_cases: string;
+}
+
+export interface LlmModelInferenceProfile {
+  model_name: string;
+  parameter_count: string;
+  quantization: string;
+  vram_required_mb: number;
+  fits_in_vram: boolean;
+  offload_to_ram_pct: number;
+  estimated_tokens_per_sec: number;
+  time_to_first_token_ms: number;
+  context_window_supported: number;
+  suitability_tag: string;
+}
+
+export interface DiffusionModelProfile {
+  model_name: string;
+  resolution: string;
+  vram_required_mb: number;
+  fits_in_vram: boolean;
+  iterations_per_sec: number;
+  time_per_image_sec: number;
+  recommended_steps: number;
+}
+
+export interface GpuAiComparisonItem {
+  gpu_name: string;
+  architecture: string;
+  vram_gb: number;
+  bandwidth_gb_s: number;
+  fp16_tflops: number;
+  llama8b_tok_s: number;
+  is_current_gpu: boolean;
+}
+
+export interface GpuAiBenchmarkResult {
+  gpu_name: string;
+  vendor: string;
+  architecture: string;
+  driver_version: string;
+  vram_total_mb: number;
+  vram_used_mb: number;
+  vram_free_mb: number;
+  memory_bus_width_bits: number;
+  memory_bandwidth_gb_s: number;
+  compute_cores: number;
+  duration_seconds: number;
+  total_gemm_passes: number;
+  total_ai_gflops_processed: number;
+  fp32_tflops: number;
+  fp16_tflops: number;
+  fp8_tflops: number;
+  int4_tflops: number;
+  matrix_gemm_time_ms: number;
+  precisions: PrecisionComputeThroughput[];
+  llm_simulations: LlmModelInferenceProfile[];
+  diffusion_simulations: DiffusionModelProfile[];
+  gpu_comparisons: GpuAiComparisonItem[];
+  initial_temp_celsius: number;
+  peak_temp_celsius: number;
+  avg_temp_celsius: number;
+  avg_power_watts?: number;
+  live_temp_celsius: number;
+  live_power_watts?: number;
+  live_fan_speed_rpm?: number;
+  thermal_throttling_detected: boolean;
+  sustained_stability_percent: number;
+  ai_composite_score: number;
+  ai_tier: string;
+  ai_recommendation: string;
+}
+
+

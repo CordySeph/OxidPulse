@@ -77,10 +77,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'stress',
-      label: 'Stress Benchmark',
-      description: 'AVX FP & Throttling',
+      label: 'Benchmark & Speed',
+      description: 'CPU, Disk IOPS & Burn-in',
       icon: <Zap className="w-4 h-4" />,
     },
+
     {
       id: 'crash_logs',
       label: 'Stability & Integrity',

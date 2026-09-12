@@ -444,11 +444,12 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               </div>
               <button
                 onClick={onRunStress}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center space-x-1.5 cursor-pointer transition"
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-teal-500/20 hover:from-cyan-500/30 hover:to-teal-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center space-x-1.5 cursor-pointer transition"
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span>Run Stress Test</span>
+                <span>Launch Benchmarks</span>
               </button>
+
             </div>
 
             <div className="space-y-3 mt-4">

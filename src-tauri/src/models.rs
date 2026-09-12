@@ -58,6 +58,30 @@ pub struct StorageDriveMetrics {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogicalVolumeInfo {
+    pub drive_letter: String,
+    pub volume_name: String,
+    pub file_system: String,
+    pub total_bytes: u64,
+    pub free_bytes: u64,
+    pub used_bytes: u64,
+    pub usage_percent: f32,
+    pub size_formatted: String,
+    pub free_formatted: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchmarkRecord {
+    pub id: String,
+    pub timestamp: String,
+    pub target_device: String,
+    pub benchmark_type: String, // "CPU", "Disk", "RAM", "Stress"
+    pub score_summary: String,
+    pub detail_json: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+
 pub struct CpuMetrics {
     pub model: String,
     pub vendor: String,
@@ -249,3 +273,146 @@ pub struct SystemHealthReport {
     pub generated_at: String,
     pub summary: SystemSummary,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuReferenceComparison {
+    pub cpu_name: String,
+    pub single_core_score: u32,
+    pub multi_core_score: u32,
+    pub single_relative_percent: f32,
+    pub multi_relative_percent: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuBenchmarkResult {
+    pub cpu_model: String,
+    pub single_core_score: u32,
+    pub multi_core_score: u32,
+    pub multi_thread_ratio: f32,
+    pub gflops: f64,
+    pub duration_seconds: u64,
+    pub threads_used: usize,
+    pub initial_temp_celsius: f32,
+    pub peak_temp_celsius: f32,
+    pub reference_comparisons: Vec<CpuReferenceComparison>,
+    pub rating_tier: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskSpeedTestResult {
+    pub drive_letter: String,
+    pub drive_model: String,
+    pub test_size_mb: u64,
+    pub seq_read_mb_s: f64,
+    pub seq_write_mb_s: f64,
+    pub random_4k_read_mb_s: f64,
+    pub random_4k_read_iops: u64,
+    pub random_4k_write_mb_s: f64,
+    pub random_4k_write_iops: u64,
+    pub access_latency_ms: f64,
+    pub drive_tier: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RamBenchmarkResult {
+    pub read_speed_gb_s: f64,
+    pub write_speed_gb_s: f64,
+    pub latency_ns: f64,
+    pub score: u32,
+    pub tier: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullSystemBenchmarkResult {
+    pub cpu: CpuBenchmarkResult,
+    pub disk: Option<DiskSpeedTestResult>,
+    pub ram: RamBenchmarkResult,
+    pub overall_pc_score: u32,
+    pub tier_badge: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrecisionComputeThroughput {
+    pub precision: String,
+    pub tflops: f64,
+    pub native_hardware_support: bool,
+    pub acceleration_type: String,
+    pub typical_use_cases: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmModelInferenceProfile {
+    pub model_name: String,
+    pub parameter_count: String,
+    pub quantization: String,
+    pub vram_required_mb: u64,
+    pub fits_in_vram: bool,
+    pub offload_to_ram_pct: f64,
+    pub estimated_tokens_per_sec: f64,
+    pub time_to_first_token_ms: f64,
+    pub context_window_supported: u32,
+    pub suitability_tag: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiffusionModelProfile {
+    pub model_name: String,
+    pub resolution: String,
+    pub vram_required_mb: u64,
+    pub fits_in_vram: bool,
+    pub iterations_per_sec: f64,
+    pub time_per_image_sec: f64,
+    pub recommended_steps: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpuAiComparisonItem {
+    pub gpu_name: String,
+    pub architecture: String,
+    pub vram_gb: u32,
+    pub bandwidth_gb_s: f64,
+    pub fp16_tflops: f64,
+    pub llama8b_tok_s: f64,
+    pub is_current_gpu: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpuAiBenchmarkResult {
+    pub gpu_name: String,
+    pub vendor: String,
+    pub architecture: String,
+    pub driver_version: String,
+    pub vram_total_mb: u64,
+    pub vram_used_mb: u64,
+    pub vram_free_mb: u64,
+    pub memory_bus_width_bits: u32,
+    pub memory_bandwidth_gb_s: f64,
+    pub compute_cores: u32,
+    pub duration_seconds: u64,
+    pub total_gemm_passes: u64,
+    pub total_ai_gflops_processed: f64,
+    pub fp32_tflops: f64,
+    pub fp16_tflops: f64,
+    pub fp8_tflops: f64,
+    pub int4_tflops: f64,
+    pub matrix_gemm_time_ms: f64,
+    pub precisions: Vec<PrecisionComputeThroughput>,
+    pub llm_simulations: Vec<LlmModelInferenceProfile>,
+    pub diffusion_simulations: Vec<DiffusionModelProfile>,
+    pub gpu_comparisons: Vec<GpuAiComparisonItem>,
+    pub initial_temp_celsius: f32,
+    pub peak_temp_celsius: f32,
+    pub avg_temp_celsius: f32,
+    pub avg_power_watts: Option<f32>,
+    pub live_temp_celsius: f32,
+    pub live_power_watts: Option<f32>,
+    pub live_fan_speed_rpm: Option<u32>,
+    pub thermal_throttling_detected: bool,
+    pub sustained_stability_percent: f32,
+    pub ai_composite_score: u32,
+    pub ai_tier: String,
+    pub ai_recommendation: String,
+}
+
+
+

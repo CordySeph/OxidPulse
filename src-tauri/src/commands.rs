@@ -1,5 +1,5 @@
 use crate::models::*;
-use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report};
+use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark};
 
 #[tauri::command]
 pub fn get_battery_metrics() -> Result<BatterySnapshot, String> {
@@ -10,6 +10,12 @@ pub fn get_battery_metrics() -> Result<BatterySnapshot, String> {
 pub fn get_storage_drives() -> Vec<StorageDriveMetrics> {
     storage::get_storage_diagnostics()
 }
+
+#[tauri::command]
+pub fn get_logical_volumes() -> Vec<LogicalVolumeInfo> {
+    storage::get_logical_volumes()
+}
+
 
 #[tauri::command]
 pub fn get_cpu_metrics() -> CpuMetrics {
@@ -50,6 +56,33 @@ pub fn get_system_summary() -> SystemSummary {
 pub async fn run_stress_test(duration_secs: Option<u64>) -> Result<StressTestResult, String> {
     stress::run_cpu_stress_test(duration_secs.unwrap_or(10)).await
 }
+
+#[tauri::command]
+pub async fn run_cpu_benchmark() -> Result<CpuBenchmarkResult, String> {
+    benchmark::run_cpu_benchmark().await
+}
+
+#[tauri::command]
+pub async fn run_disk_speed_test(
+    drive_path: String,
+    test_size_mb: Option<u64>,
+) -> Result<DiskSpeedTestResult, String> {
+    benchmark::run_disk_speed_test(drive_path, test_size_mb).await
+}
+
+#[tauri::command]
+pub async fn run_ram_benchmark() -> Result<RamBenchmarkResult, String> {
+    benchmark::run_ram_benchmark().await
+}
+
+#[tauri::command]
+pub async fn run_gpu_ai_benchmark(
+    duration_secs: Option<u64>,
+) -> Result<GpuAiBenchmarkResult, String> {
+    benchmark::run_gpu_ai_benchmark(duration_secs).await
+}
+
+
 
 #[tauri::command]
 pub fn export_full_report_json() -> Result<String, String> {
