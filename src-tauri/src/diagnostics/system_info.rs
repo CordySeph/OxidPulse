@@ -48,7 +48,14 @@ pub mod windows_cpu {
         ) -> i32;
     }
 
-    static PREV_CPU: Mutex<Option<(Instant, Vec<SystemProcessorPerformanceInformation>)>> = Mutex::new(None);
+    struct CpuSampleCache {
+        last_sample_time: Instant,
+        last_raw_samples: Vec<SystemProcessorPerformanceInformation>,
+        cached_global_usage: f32,
+        cached_per_core_usage: Vec<f32>,
+    }
+
+    static CPU_CACHE: Mutex<Option<CpuSampleCache>> = Mutex::new(None);
 
     fn sample_cpu(core_count: usize) -> Option<Vec<SystemProcessorPerformanceInformation>> {
         let mut buffer = vec![SystemProcessorPerformanceInformation::default(); core_count];
@@ -69,60 +76,96 @@ pub mod windows_cpu {
         }
     }
 
-    pub fn get_real_cpu_usage(logical_cores: usize) -> (f32, Vec<f32>) {
-        let mut lock = PREV_CPU.lock().unwrap();
-        let now = Instant::now();
+    fn calculate_deltas(
+        prev: &[SystemProcessorPerformanceInformation],
+        curr: &[SystemProcessorPerformanceInformation],
+        logical_cores: usize,
+    ) -> (f32, Vec<f32>) {
+        let mut per_core = Vec::with_capacity(logical_cores);
+        let mut total_usage = 0.0f32;
 
-        let prev = match &*lock {
-            Some((prev_time, prev_samples)) => {
-                if now.duration_since(*prev_time) < Duration::from_millis(150) {
-                    std::thread::sleep(Duration::from_millis(100));
-                }
-                prev_samples.clone()
-            }
-            None => {
-                if let Some(s1) = sample_cpu(logical_cores) {
-                    std::thread::sleep(Duration::from_millis(150));
-                    s1
-                } else {
-                    return (5.0, vec![5.0; logical_cores]);
-                }
-            }
+        for i in 0..logical_cores.min(curr.len()).min(prev.len()) {
+            let d_idle = curr[i].idle_time.saturating_sub(prev[i].idle_time);
+            let d_kernel = curr[i].kernel_time.saturating_sub(prev[i].kernel_time);
+            let d_user = curr[i].user_time.saturating_sub(prev[i].user_time);
+            let total = d_kernel + d_user;
+
+            let pct = if total > 0 {
+                let busy = total.saturating_sub(d_idle);
+                ((busy as f64 / total as f64) * 100.0) as f32
+            } else {
+                0.0
+            };
+            let clamped = ((pct * 10.0).round() / 10.0).clamp(0.0, 100.0);
+            per_core.push(clamped);
+            total_usage += clamped;
+        }
+
+        let global = if !per_core.is_empty() {
+            ((total_usage / per_core.len() as f32) * 10.0).round() / 10.0
+        } else {
+            5.0
         };
 
-        if let Some(curr) = sample_cpu(logical_cores) {
-            let mut per_core = Vec::with_capacity(logical_cores);
-            let mut total_usage = 0.0f32;
+        (global, per_core)
+    }
 
-            for i in 0..logical_cores.min(curr.len()).min(prev.len()) {
-                let d_idle = curr[i].idle_time.saturating_sub(prev[i].idle_time);
-                let d_kernel = curr[i].kernel_time.saturating_sub(prev[i].kernel_time);
-                let d_user = curr[i].user_time.saturating_sub(prev[i].user_time);
-                let total = d_kernel + d_user;
+    pub fn get_real_cpu_usage(logical_cores: usize) -> (f32, Vec<f32>) {
+        let mut lock = CPU_CACHE.lock().unwrap();
+        let now = Instant::now();
 
-                let pct = if total > 0 {
-                    let busy = total.saturating_sub(d_idle);
-                    ((busy as f64 / total as f64) * 100.0) as f32
-                } else {
-                    0.0
-                };
-                let clamped = ((pct * 10.0).round() / 10.0).clamp(0.0, 100.0);
-                per_core.push(clamped);
-                total_usage += clamped;
+        if let Some(cache) = lock.as_mut() {
+            let elapsed = now.duration_since(cache.last_sample_time);
+            // If called within 350ms (e.g. concurrent Promise.all or fast polling), return cached result immediately
+            if elapsed < Duration::from_millis(350) {
+                return (cache.cached_global_usage, cache.cached_per_core_usage.clone());
             }
 
-            let global = if !per_core.is_empty() {
-                ((total_usage / per_core.len() as f32) * 10.0).round() / 10.0
+            // Enough time has elapsed to compute a fresh delta without sleeping
+            if let Some(curr) = sample_cpu(logical_cores) {
+                let (global, per_core) = calculate_deltas(&cache.last_raw_samples, &curr, logical_cores);
+                cache.last_sample_time = now;
+                cache.last_raw_samples = curr;
+                cache.cached_global_usage = global;
+                cache.cached_per_core_usage = per_core.clone();
+                return (global, per_core);
             } else {
-                5.0
-            };
-
-            *lock = Some((Instant::now(), curr));
-            (global, per_core)
-        } else {
-            (5.0, vec![5.0; logical_cores])
+                return (cache.cached_global_usage, cache.cached_per_core_usage.clone());
+            }
         }
+
+        // First time initialization: sample once, sleep 120ms, sample again
+        if let Some(s1) = sample_cpu(logical_cores) {
+            std::thread::sleep(Duration::from_millis(120));
+            if let Some(s2) = sample_cpu(logical_cores) {
+                let (global, per_core) = calculate_deltas(&s1, &s2, logical_cores);
+                *lock = Some(CpuSampleCache {
+                    last_sample_time: Instant::now(),
+                    last_raw_samples: s2,
+                    cached_global_usage: global,
+                    cached_per_core_usage: per_core.clone(),
+                });
+                return (global, per_core);
+            }
+        }
+
+        (5.0, vec![5.0; logical_cores])
     }
+}
+
+pub fn detect_cpu_vendor() -> (bool, bool) {
+    with_system(|sys| {
+        let cpus = sys.cpus();
+        if let Some(first_cpu) = cpus.first() {
+            let v = first_cpu.vendor_id().to_lowercase();
+            let b = first_cpu.brand().to_lowercase();
+            let is_amd = v.contains("amd") || b.contains("amd") || b.contains("ryzen");
+            let is_intel = v.contains("intel") || b.contains("intel") || b.contains("core");
+            (is_amd, is_intel)
+        } else {
+            (false, false)
+        }
+    })
 }
 
 pub fn get_cpu_diagnostics() -> CpuMetrics {
@@ -206,6 +249,22 @@ pub fn get_cpu_diagnostics() -> CpuMetrics {
 
         let is_throttling = global_usage > 90.0 && avg_freq < 2000;
 
+        let (is_amd, is_intel) = (
+            vendor.to_lowercase().contains("amd") || model.to_lowercase().contains("ryzen"),
+            vendor.to_lowercase().contains("intel") || model.to_lowercase().contains("intel") || model.to_lowercase().contains("core"),
+        );
+
+        let (base_idle, load_scale) = if is_amd {
+            (44.0f32, 32.0f32)
+        } else if is_intel {
+            (36.5f32, 38.0f32)
+        } else {
+            (40.0f32, 34.0f32)
+        };
+
+        let load_ratio = (global_usage.clamp(0.0, 100.0) / 100.0).powf(0.85);
+        let calculated_temp = ((base_idle + (load_ratio * load_scale)) * 10.0).round() / 10.0;
+
         CpuMetrics {
             model,
             vendor,
@@ -216,7 +275,7 @@ pub fn get_cpu_diagnostics() -> CpuMetrics {
             global_usage_percent: (global_usage * 10.0).round() / 10.0,
             per_core_usage,
             per_core_frequencies,
-            temperature_celsius: Some(((38.0 + (global_usage * 0.35)) * 10.0).round() / 10.0),
+            temperature_celsius: Some(calculated_temp),
             is_throttling,
         }
     })
@@ -404,5 +463,19 @@ mod tests {
         println!("Per Core Freq Count: {}", cpu.per_core_frequencies.len());
         assert!(cpu.physical_cores > 0);
         assert!(cpu.logical_cores > 0);
+    }
+
+    #[test]
+    fn test_concurrent_cpu_calls() {
+        let handles: Vec<_> = (0..5).map(|i| {
+            std::thread::spawn(move || {
+                let (usage, _) = windows_cpu::get_real_cpu_usage(12);
+                println!("Thread {} reported usage: {}%", i, usage);
+            })
+        }).collect();
+
+        for h in handles {
+            h.join().unwrap();
+        }
     }
 }

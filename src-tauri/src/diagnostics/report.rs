@@ -272,21 +272,27 @@ pub fn save_printable_report_html() -> Result<String, String> {
 pub fn open_file_folder(path: &str) -> Result<(), String> {
     let p = std::path::Path::new(path);
 
+    #[cfg(target_os = "windows")]
+    {
+        if p.exists() {
+            if p.is_file() {
+                let cmd = format!("Start-Process explorer.exe -ArgumentList '/select,\"{}\"'", path.replace('/', "\\"));
+                let _ = std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", &cmd])
+                    .spawn();
+                return Ok(());
+            } else {
+                let _ = open::that(p);
+                return Ok(());
+            }
+        }
+    }
+
     #[cfg(target_os = "macos")]
     {
         if p.is_file() {
             let _ = std::process::Command::new("open")
                 .args(["-R", path])
-                .spawn();
-            return Ok(());
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        if p.is_file() {
-            let _ = std::process::Command::new("explorer")
-                .args([format!("/select,\"{}\"", path)])
                 .spawn();
             return Ok(());
         }

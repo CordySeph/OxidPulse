@@ -22,7 +22,8 @@ pub fn run() {
             export_full_report_json,
             save_json_report_file,
             save_printable_report_html,
-            open_file_folder
+            open_file_folder,
+            launch_windows_tool
         ])
         .run(tauri::generate_context!())
         .expect("error while running OxidPulse application");

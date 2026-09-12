@@ -53,7 +53,16 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const handleCopyJson = async () => {
     try {
       const jsonStr = await invoke<string>('export_full_report_json');
-      await navigator.clipboard.writeText(jsonStr);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(jsonStr);
+      } else {
+        const el = document.createElement('textarea');
+        el.value = jsonStr;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {

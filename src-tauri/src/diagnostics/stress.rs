@@ -12,7 +12,7 @@ pub async fn run_cpu_stress_test(duration_secs: u64) -> Result<StressTestResult,
     let running = Arc::new(AtomicBool::new(true));
     let total_ops = Arc::new(AtomicU64::new(0));
 
-    let initial_temp = 48.0;
+    let initial_temp = crate::diagnostics::sensors::get_thermal_and_gpu_diagnostics().cpu_package_temp;
     let start_time = Instant::now();
 
     // Spawn compute threads

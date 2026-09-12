@@ -126,6 +126,41 @@ export interface StressTestResult {
   status: string;
 }
 
+export interface ProblemDevice {
+  name: string;
+  device_id: string;
+  error_code: number;
+  status: string;
+  description: string;
+}
+
+export interface SystemStabilityEvent {
+  timestamp: string;
+  provider: string;
+  event_id: number;
+  category: 'Hardware' | 'Power' | 'Driver' | 'System' | string;
+  level: 'Critical' | 'Error' | 'Warning' | string;
+  title: string;
+  description: string;
+}
+
+export interface HardwareIntegrityStatus {
+  score: number;
+  status: 'Healthy' | 'Warning' | 'Critical' | string;
+  whea_error_count: number;
+  problem_device_count: number;
+  details: string[];
+}
+
+export interface OsIntegrityStatus {
+  score: number;
+  status: 'Healthy' | 'Warning' | 'Critical' | string;
+  sudden_shutdown_count: number;
+  minidump_count: number;
+  service_timeout_count: number;
+  details: string[];
+}
+
 export interface CrashDetail {
   dump_file_name: string;
   dump_path: string;
@@ -141,6 +176,12 @@ export interface CrashDumpInfo {
   total_dumps_found: number;
   latest_dump_time?: string;
   recent_crashes: CrashDetail[];
+  problem_devices: ProblemDevice[];
+  stability_events: SystemStabilityEvent[];
+  hardware_status: HardwareIntegrityStatus;
+  os_status: OsIntegrityStatus;
+  diagnosis_verdict: string;
+  recommendations: string[];
 }
 
 export interface HealthWarning {

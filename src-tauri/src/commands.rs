@@ -70,3 +70,52 @@ pub fn save_printable_report_html() -> Result<String, String> {
 pub fn open_file_folder(path: String) -> Result<(), String> {
     report::open_file_folder(&path)
 }
+
+#[tauri::command]
+pub fn launch_windows_tool(tool: String) -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        match tool.as_str() {
+            "reliability" => {
+                std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", "Start-Process perfmon.exe -ArgumentList '/rel'"])
+                    .spawn()
+                    .map_err(|e| e.to_string())?;
+                Ok("Launched Windows Reliability Monitor (perfmon /rel)".to_string())
+            }
+            "devmgmt" => {
+                std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", "Start-Process devmgmt.msc"])
+                    .spawn()
+                    .map_err(|e| e.to_string())?;
+                Ok("Launched Windows Device Manager (devmgmt.msc)".to_string())
+            }
+            "eventvwr" => {
+                std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", "Start-Process eventvwr.msc"])
+                    .spawn()
+                    .map_err(|e| e.to_string())?;
+                Ok("Launched Windows Event Viewer (eventvwr.msc)".to_string())
+            }
+            "mdsched" => {
+                std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", "Start-Process mdsched.exe"])
+                    .spawn()
+                    .map_err(|e| e.to_string())?;
+                Ok("Launched Windows Memory Diagnostic (mdsched.exe)".to_string())
+            }
+            "sfc" => {
+                std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", "Start-Process cmd -ArgumentList '/k sfc /scannow' -Verb RunAs"])
+                    .spawn()
+                    .map_err(|e| e.to_string())?;
+                Ok("Launched Elevated System File Checker (sfc /scannow)".to_string())
+            }
+            _ => Err(format!("Unknown Windows tool: {}", tool)),
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Windows Diagnostic Tool Launch is only available on Windows OS.".to_string())
+    }
+}

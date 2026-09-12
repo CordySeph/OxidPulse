@@ -83,8 +83,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'crash_logs',
-      label: 'Stability & Dumps',
-      description: 'Minidump & Panics',
+      label: 'Stability & Integrity',
+      description: 'Hardware vs OS Audit',
       icon: <AlertOctagon className="w-4 h-4" />,
       badge: warningsCount > 0 ? warningsCount : '0',
       badgeColor:

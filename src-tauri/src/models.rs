@@ -149,6 +149,45 @@ pub struct StressTestResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProblemDevice {
+    pub name: String,
+    pub device_id: String,
+    pub error_code: u32,
+    pub status: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemStabilityEvent {
+    pub timestamp: String,
+    pub provider: String,
+    pub event_id: u32,
+    pub category: String, // "Hardware", "Power", "Driver", "System"
+    pub level: String,    // "Critical", "Error", "Warning"
+    pub title: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareIntegrityStatus {
+    pub score: u8,
+    pub status: String, // "Healthy", "Warning", "Critical"
+    pub whea_error_count: usize,
+    pub problem_device_count: usize,
+    pub details: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OsIntegrityStatus {
+    pub score: u8,
+    pub status: String, // "Healthy", "Warning", "Critical"
+    pub sudden_shutdown_count: usize,
+    pub minidump_count: usize,
+    pub service_timeout_count: usize,
+    pub details: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrashDetail {
     pub dump_file_name: String,
     pub dump_path: String,
@@ -165,6 +204,12 @@ pub struct CrashDumpInfo {
     pub total_dumps_found: usize,
     pub latest_dump_time: Option<String>,
     pub recent_crashes: Vec<CrashDetail>,
+    pub problem_devices: Vec<ProblemDevice>,
+    pub stability_events: Vec<SystemStabilityEvent>,
+    pub hardware_status: HardwareIntegrityStatus,
+    pub os_status: OsIntegrityStatus,
+    pub diagnosis_verdict: String,
+    pub recommendations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

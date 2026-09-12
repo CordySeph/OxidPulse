@@ -90,22 +90,24 @@ export function App() {
     }
   }, []);
 
-  // Periodic fast refresh for live CPU & RAM metrics
+  // Periodic fast refresh for live CPU, RAM & Thermal/GPU metrics
   useEffect(() => {
     fetchAllDiagnostics();
 
     const interval = setInterval(async () => {
       try {
-        const [cpuRes, memoryRes] = await Promise.all([
+        const [cpuRes, memoryRes, thermalRes] = await Promise.all([
           invoke<CpuMetrics>('get_cpu_metrics'),
           invoke<MemoryMetrics>('get_memory_metrics'),
+          invoke<ThermalSensorMetrics>('get_thermal_metrics'),
         ]);
         setCpu(cpuRes);
         setMemory(memoryRes);
+        setThermals(thermalRes);
       } catch (err) {
-        console.error('Fast polling error:', err);
+        console.error('Fast telemetry polling error:', err);
       }
-    }, 2500);
+    }, 1500);
 
     return () => clearInterval(interval);
   }, [fetchAllDiagnostics]);

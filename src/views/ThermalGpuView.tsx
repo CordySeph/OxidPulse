@@ -28,6 +28,15 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
   }
 
   const gpu = thermals.gpu_devices[0];
+  const maxFanRpm = Math.max(0, ...thermals.fan_speeds_rpm.map(([_, rpm]) => rpm), gpu?.fan_speed_rpm ?? 0);
+  const hasActiveFans = maxFanRpm > 0;
+  const coolingMethod = gpu?.fan_speed_rpm
+    ? `${gpu.fan_speed_rpm} RPM (Active PWM)`
+    : hasActiveFans
+    ? 'Active Air Cooling (PWM)'
+    : 'Fanless Passive Dissipation';
+  const estDb = maxFanRpm === 0 ? 0 : Math.round(18 + (maxFanRpm / 2000) * 18);
+  const acousticText = maxFanRpm === 0 ? '0 dBA (Silent Passive)' : `~${estDb} dBA (Low Acoustic Profile)`;
 
   return (
     <div className="space-y-6 pb-12">
@@ -47,8 +56,12 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
 
         <div className="flex items-center space-x-3">
           <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center space-x-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
             <ShieldCheck className="w-4 h-4" />
-            <span>Sensors Synchronized</span>
+            <span>Live Stream (1.5s)</span>
           </div>
           <div className="px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700/60 text-xs font-mono text-slate-200">
             Peak Recorded: {thermals.max_temp_recorded}°C
@@ -67,7 +80,7 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
                 CPU SoC Die & Core Sensors
               </h3>
             </div>
-            <span className="text-sm font-mono font-bold text-rose-400">
+            <span className="text-sm font-mono font-bold text-rose-400 transition-all duration-300">
               {thermals.cpu_package_temp.toFixed(1)}°C Package
             </span>
           </div>
@@ -81,7 +94,7 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
             </div>
             <div className="w-28 bg-slate-800 rounded-full h-2.5 overflow-hidden p-0.5">
               <div
-                className="bg-gradient-to-r from-teal-400 via-emerald-400 to-rose-400 h-full rounded-full"
+                className="bg-gradient-to-r from-teal-400 via-emerald-400 to-rose-400 h-full rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${Math.min(100, thermals.cpu_package_temp)}%` }}
               />
             </div>
@@ -90,16 +103,16 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
           {/* Per Core Temp Grid */}
           <div>
             <div className="text-xs text-slate-400 font-mono mb-2.5">
-              8 Core Thermal Breakdown
+              {thermals.cpu_core_temps.length} Core Thermal Breakdown
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
               {thermals.cpu_core_temps.map((temp, idx) => (
                 <div
                   key={idx}
-                  className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-center flex flex-col items-center justify-center"
+                  className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-center flex flex-col items-center justify-center transition-all duration-300"
                 >
-                  <span className="text-[9px] font-mono text-slate-400 font-bold">{idx < 4 ? `P${idx}` : `E${idx - 4}`}</span>
-                  <span className="text-xs font-black font-mono text-white mt-1">{temp.toFixed(0)}°C</span>
+                  <span className="text-[9px] font-mono text-slate-400 font-bold">C#{idx + 1}</span>
+                  <span className="text-xs font-black font-mono text-white mt-1 transition-all duration-300">{temp.toFixed(1)}°C</span>
                 </div>
               ))}
             </div>
@@ -112,10 +125,10 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
             <div className="flex items-center space-x-2">
               <Monitor className="w-5 h-5 text-emerald-400" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">
-                GPU Engine ({gpu?.vendor || 'Metal'})
+                GPU Engine ({gpu?.vendor || 'DirectX'})
               </h3>
             </div>
-            <span className="text-xs font-mono font-bold text-emerald-400">
+            <span className="text-xs font-mono font-bold text-emerald-400 transition-all duration-300">
               {gpu ? `${gpu.temperature_celsius}°C` : 'N/A'}
             </span>
           </div>
@@ -135,14 +148,14 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
               {/* VRAM Allocation */}
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-300 font-medium">Unified Graphics Memory</span>
+                  <span className="text-slate-300 font-medium">Video / Graphics Memory</span>
                   <span className="font-mono font-bold text-white">
                     {(gpu.memory_used_mb / 1024).toFixed(1)} / {(gpu.memory_total_mb / 1024).toFixed(0)} GB ({gpu.memory_usage_percent}%)
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-emerald-400 h-full rounded-full"
+                    className="bg-emerald-400 h-full rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${gpu.memory_usage_percent}%` }}
                   />
                 </div>
@@ -152,7 +165,7 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex justify-between items-center">
                   <span className="text-slate-400">Cooling Method</span>
-                  <span className="font-mono font-bold text-white">Fanless Passive</span>
+                  <span className="font-mono font-bold text-white truncate max-w-[120px]">{coolingMethod}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex justify-between items-center">
                   <span className="text-slate-400">GPU Power Draw</span>
@@ -185,7 +198,7 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
                 className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs"
               >
                 <span className="text-slate-300 font-medium">{name}</span>
-                <span className="font-mono font-bold text-cyan-300">{temp.toFixed(1)}°C</span>
+                <span className="font-mono font-bold text-cyan-300 transition-all duration-300">{temp.toFixed(1)}°C</span>
               </div>
             ))}
           </div>
@@ -207,7 +220,7 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
                   className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs"
                 >
                   <span className="text-slate-300 font-medium">{name}</span>
-                  <span className="font-mono font-bold text-emerald-400">
+                  <span className="font-mono font-bold text-emerald-400 transition-all duration-300">
                     {rpm === 0 ? '0 RPM (Silent)' : `${rpm} RPM`}
                   </span>
                 </div>
@@ -217,7 +230,7 @@ export const ThermalGpuView: React.FC<ThermalGpuViewProps> = ({ thermals }) => {
 
           <div className="text-[11px] text-slate-400 font-mono pt-3 border-t border-slate-800/60 flex items-center justify-between">
             <span>Acoustic Output:</span>
-            <span className="text-emerald-400 font-bold">0 dB (Silent Passive Dissipation)</span>
+            <span className="text-emerald-400 font-bold">{acousticText}</span>
           </div>
         </div>
       </div>

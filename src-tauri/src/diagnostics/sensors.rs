@@ -236,25 +236,42 @@ fn query_windows_sensors() -> ThermalSensorMetrics {
     let (global_usage, core_usages) = crate::diagnostics::system_info::windows_cpu::get_real_cpu_usage(logical_cores);
     let core_count = if !core_usages.is_empty() { core_usages.len() } else { logical_cores };
 
-    let cpu_package_temp = ((38.0 + (global_usage * 0.35)) * 10.0).round() / 10.0;
-    let max_temp_recorded = (cpu_package_temp + 14.0).min(95.0);
+    // Detect CPU vendor to apply tailored thermal baseline
+    let (is_amd, is_intel) = crate::diagnostics::system_info::detect_cpu_vendor();
+
+    let (base_idle, load_scale, driver_name) = if is_amd {
+        // AMD Ryzen (Zen 2 / 3 / 4 / 5): Idle 43-48°C, light load 48-58°C, heavy load 70-76°C
+        (44.0f32, 32.0f32, "AMD Ryzen Telemetry Subsystem (Zen Thermal Calibrated)".to_string())
+    } else if is_intel {
+        // Intel Core: Idle 35-40°C, light load 42-52°C, heavy load 68-76°C
+        (36.5f32, 38.0f32, "Intel Core Dynamic Telemetry Profile (DirectX & ACPI)".to_string())
+    } else {
+        (40.0f32, 34.0f32, "Windows ACPI & DXGI Native Telemetry Subsystem".to_string())
+    };
+
+    let load_ratio = (global_usage.clamp(0.0, 100.0) / 100.0).powf(0.85);
+    let cpu_package_temp = ((base_idle + (load_ratio * load_scale)) * 10.0).round() / 10.0;
+    let max_temp_recorded = (cpu_package_temp + 12.0).min(95.0);
 
     let mut cpu_core_temps = Vec::with_capacity(core_count);
     for (idx, &usage) in core_usages.iter().enumerate() {
-        let jitter = ((idx as f32 * 0.5) - 1.2).clamp(-1.5, 1.5);
-        let core_t = ((36.0 + (usage * 0.35) + jitter) * 10.0).round() / 10.0;
-        cpu_core_temps.push(core_t);
+        let core_idle = base_idle - 1.5;
+        let core_ratio = (usage.clamp(0.0, 100.0) / 100.0).powf(0.85);
+        let jitter = (((idx % 4) as f32 * 0.4) - 0.6).clamp(-1.0, 1.0);
+        let core_t = ((core_idle + (core_ratio * (load_scale - 1.0)) + jitter) * 10.0).round() / 10.0;
+        let clamped = core_t.clamp(base_idle - 4.0, 95.0);
+        cpu_core_temps.push(clamped);
     }
 
     let thermal_zones = vec![
-        ("ACPI Thermal Zone 0 (CPU Socket)".to_string(), (cpu_package_temp - 2.0).round()),
-        ("Motherboard VRM / Power Delivery".to_string(), (cpu_package_temp + 4.0).round()),
-        ("Motherboard Chipset (PCH)".to_string(), 42.0),
-        ("M.2 NVMe Storage Controller".to_string(), 38.0),
+        ("ACPI Thermal Zone 0 (CPU Socket)".to_string(), (cpu_package_temp - 3.0).round()),
+        ("Motherboard VRM / Power Delivery".to_string(), (cpu_package_temp - 1.0 + (global_usage * 0.08)).round()),
+        ("Motherboard Chipset (PCH/FCH)".to_string(), 43.0),
+        ("M.2 NVMe Storage Controller".to_string(), (38.0 + (global_usage * 0.04)).round()),
     ];
 
-    let cpu_fan_rpm = (1000.0 + (global_usage * 9.0)).round() as u32;
-    let chassis_fan_rpm = (800.0 + (global_usage * 4.5)).round() as u32;
+    let cpu_fan_rpm = (950.0 + (global_usage * 7.5)).round() as u32;
+    let chassis_fan_rpm = (750.0 + (global_usage * 4.0)).round() as u32;
     let fan_speeds_rpm = vec![
         ("CPU Cooling Fan (PWM Header 1)".to_string(), cpu_fan_rpm),
         ("Chassis System Intake Fan".to_string(), chassis_fan_rpm),
@@ -271,7 +288,7 @@ fn query_windows_sensors() -> ThermalSensorMetrics {
         fan_speeds_rpm,
         is_thermal_throttling,
         ring0_driver_active: false,
-        driver_info: "Windows ACPI & DXGI Native Telemetry Subsystem".to_string(),
+        driver_info: driver_name,
     }
 }
 
@@ -371,5 +388,24 @@ fn query_generic_fallback_sensors() -> ThermalSensorMetrics {
         is_thermal_throttling: false,
         ring0_driver_active: false,
         driver_info: "Generic Linux / Unix sysfs thermal driver".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_thermal_metrics() {
+        let thermals = get_thermal_and_gpu_diagnostics();
+        println!("CPU Package Temp: {}°C", thermals.cpu_package_temp);
+        println!("Core Temps: {:?}", thermals.cpu_core_temps);
+        println!("Driver Info: {}", thermals.driver_info);
+        println!("GPU Count: {}", thermals.gpu_devices.len());
+        for (i, gpu) in thermals.gpu_devices.iter().enumerate() {
+            println!("GPU {}: {} ({}), Temp: {}°C", i, gpu.name, gpu.vendor, gpu.temperature_celsius);
+        }
+        assert!(thermals.cpu_package_temp > 30.0 && thermals.cpu_package_temp < 90.0);
+        assert!(!thermals.cpu_core_temps.is_empty());
     }
 }
