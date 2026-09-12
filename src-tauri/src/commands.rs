@@ -105,7 +105,7 @@ pub fn open_file_folder(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn launch_windows_tool(tool: String) -> Result<String, String> {
+pub fn launch_windows_tool(#[allow(unused_variables)] tool: String) -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         match tool.as_str() {

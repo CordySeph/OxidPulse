@@ -261,7 +261,6 @@ pub async fn run_disk_speed_test(
     // --- 1. Sequential Write Test (1MB Blocks, Direct Unbuffered) ---
     let write_start = Instant::now();
     {
-        #[cfg(target_os = "windows")]
         let mut opts = OpenOptions::new();
         opts.create(true).write(true).read(true).truncate(true);
         #[cfg(target_os = "windows")]
@@ -284,7 +283,6 @@ pub async fn run_disk_speed_test(
     // --- 2. Sequential Read Test (1MB Blocks, Direct Unbuffered) ---
     let read_start = Instant::now();
     {
-        #[cfg(target_os = "windows")]
         let mut opts = OpenOptions::new();
         opts.read(true);
         #[cfg(target_os = "windows")]
@@ -311,7 +309,6 @@ pub async fn run_disk_speed_test(
 
     let rand_read_start = Instant::now();
     {
-        #[cfg(target_os = "windows")]
         let mut opts = OpenOptions::new();
         opts.read(true);
         #[cfg(target_os = "windows")]
@@ -342,7 +339,6 @@ pub async fn run_disk_speed_test(
     let num_random_writes = 500;
     let rand_write_start = Instant::now();
     {
-        #[cfg(target_os = "windows")]
         let mut opts = OpenOptions::new();
         opts.write(true).read(true);
         #[cfg(target_os = "windows")]

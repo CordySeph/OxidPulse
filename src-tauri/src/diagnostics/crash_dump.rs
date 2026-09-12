@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use crate::models::{CrashDetail, CrashDumpInfo, HardwareIntegrityStatus, OsIntegrityStatus, ProblemDevice, SystemStabilityEvent};
 use std::path::Path;
 

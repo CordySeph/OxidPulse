@@ -14,6 +14,7 @@ use std::os::windows::process::CommandExt;
 /// Creates a `std::process::Command` configured with `CREATE_NO_WINDOW` on Windows
 /// to prevent any flashing console / cmd windows during execution.
 pub fn silent_command(program: &str) -> std::process::Command {
+    #[allow(unused_mut)]
     let mut cmd = std::process::Command::new(program);
     #[cfg(windows)]
     {

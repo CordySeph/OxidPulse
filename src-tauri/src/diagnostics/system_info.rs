@@ -171,6 +171,8 @@ pub fn detect_cpu_vendor() -> (bool, bool) {
 pub fn get_cpu_diagnostics() -> CpuMetrics {
     with_system(|sys| {
         sys.refresh_cpu_frequency();
+        #[cfg(not(target_os = "windows"))]
+        sys.refresh_cpu_usage();
 
         let cpus = sys.cpus();
         let physical_cores = sys.physical_core_count().unwrap_or(cpus.len());
@@ -178,9 +180,6 @@ pub fn get_cpu_diagnostics() -> CpuMetrics {
 
         #[cfg(target_os = "windows")]
         let (global_usage, per_core_usage) = windows_cpu::get_real_cpu_usage(logical_cores);
-
-        #[cfg(not(target_os = "windows"))]
-        sys.refresh_cpu_usage();
 
         #[cfg(not(target_os = "windows"))]
         let global_usage = (sys.global_cpu_usage() * 10.0).round() / 10.0;
