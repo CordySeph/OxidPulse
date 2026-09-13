@@ -7,6 +7,7 @@ pub mod crash_dump;
 pub mod scoring;
 pub mod report;
 pub mod benchmark;
+pub mod latency;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;

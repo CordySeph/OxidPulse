@@ -29,7 +29,8 @@ pub fn run() {
             save_json_report_file,
             save_printable_report_html,
             open_file_folder,
-            launch_windows_tool
+            launch_windows_tool,
+            get_dpc_latency_metrics
         ])
 
         .run(tauri::generate_context!())

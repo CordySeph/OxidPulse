@@ -1,5 +1,5 @@
 use crate::models::*;
-use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark};
+use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark, latency};
 
 #[tauri::command]
 pub fn get_battery_metrics() -> Result<BatterySnapshot, String> {
@@ -84,6 +84,11 @@ pub async fn run_gpu_ai_benchmark(
 }
 
 
+
+#[tauri::command]
+pub fn get_dpc_latency_metrics(sample_duration_ms: Option<u64>) -> DpcLatencyMetrics {
+    latency::measure_system_latency(sample_duration_ms)
+}
 
 #[tauri::command]
 pub fn export_full_report_json() -> Result<String, String> {

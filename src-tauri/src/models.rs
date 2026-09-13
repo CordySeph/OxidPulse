@@ -338,6 +338,27 @@ pub struct FullSystemBenchmarkResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriverLatencyIssue {
+    pub name: String,
+    pub module: String,
+    pub description: String,
+    pub severity: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DpcLatencyMetrics {
+    pub current_latency_us: f64,
+    pub highest_latency_us: f64,
+    pub average_latency_us: f64,
+    pub sample_count: u64,
+    pub audio_dropout_risk: String,
+    pub status: String,
+    pub is_suitable_for_realtime_audio: bool,
+    pub suspected_drivers: Vec<DriverLatencyIssue>,
+    pub recommendations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrecisionComputeThroughput {
     pub precision: String,
     pub tflops: f64,

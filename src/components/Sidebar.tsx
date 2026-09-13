@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ShieldCheck,
   CheckCircle2,
+  Sliders,
 } from 'lucide-react';
 
 export type TabType =
@@ -91,6 +92,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Peripherals Suite',
       description: 'Screen, Keys, Mouse & Mic',
       icon: <Activity className="w-4 h-4" />,
+    },
+    {
+      id: 'latency',
+      label: 'DPC Latency Monitor',
+      description: 'Audio Glitch & Stutter',
+      icon: <Sliders className="w-4 h-4" />,
     },
     {
       id: 'crash_logs',

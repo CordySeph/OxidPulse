@@ -299,6 +299,25 @@ export interface FullSystemBenchmarkResult {
   tier_badge: string;
 }
 
+export interface DriverLatencyIssue {
+  name: string;
+  module: string;
+  description: string;
+  severity: string;
+}
+
+export interface DpcLatencyMetrics {
+  current_latency_us: number;
+  highest_latency_us: number;
+  average_latency_us: number;
+  sample_count: number;
+  audio_dropout_risk: string;
+  status: string;
+  is_suitable_for_realtime_audio: boolean;
+  suspected_drivers: DriverLatencyIssue[];
+  recommendations: string[];
+}
+
 export interface PrecisionComputeThroughput {
   precision: string;
   tflops: number;
