@@ -21,6 +21,11 @@ export type TabType =
   | 'cpu_ram'
   | 'thermals'
   | 'stress'
+  | 'peripherals'
+  | 'latency'
+  | 'memory_test'
+  | 'network'
+  | 'power'
   | 'crash_logs'
   | 'report';
 
@@ -81,7 +86,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       description: 'CPU, Disk IOPS & Burn-in',
       icon: <Zap className="w-4 h-4" />,
     },
-
+    {
+      id: 'peripherals',
+      label: 'Peripherals Suite',
+      description: 'Screen, Keys, Mouse & Mic',
+      icon: <Activity className="w-4 h-4" />,
+    },
     {
       id: 'crash_logs',
       label: 'Stability & Integrity',
