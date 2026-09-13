@@ -182,11 +182,12 @@ export function App() {
   };
 
   // Handler for GPU AI & Neural Inference Benchmark
-  const handleRunGpuAiBench = async (durationSecs: number = 5) => {
+  const handleRunGpuAiBench = async (durationSecs: number = 5, target: string = 'auto') => {
     try {
       setIsGpuAiBenchRunning(true);
       const res = await invoke<GpuAiBenchmarkResult>('run_gpu_ai_benchmark', {
         durationSecs,
+        gpuTarget: target,
       });
       setGpuAiBenchResult(res);
       fetchAllDiagnostics();
@@ -295,6 +296,7 @@ export function App() {
                     isGpuAiBenchRunning={isGpuAiBenchRunning}
                     gpuAiResult={gpuAiBenchResult}
                     onRunGpuAiBench={handleRunGpuAiBench}
+                    gpuDevices={thermals?.gpu_devices || []}
                     isStressRunning={isStressRunning}
                     stressResult={stressResult}
                     onRunStress={handleRunStress}

@@ -412,6 +412,11 @@ pub struct GpuAiBenchmarkResult {
     pub ai_composite_score: u32,
     pub ai_tier: String,
     pub ai_recommendation: String,
+    pub is_combined_mode: bool,
+    pub gpu_count: usize,
+    pub device_list: Vec<String>,
+    pub multi_gpu_scaling_efficiency: Option<f32>,
+    pub pooled_vram_total_mb: Option<u64>,
 }
 
 

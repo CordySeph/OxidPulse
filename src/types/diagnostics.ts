@@ -369,6 +369,11 @@ export interface GpuAiBenchmarkResult {
   ai_composite_score: number;
   ai_tier: string;
   ai_recommendation: string;
+  is_combined_mode?: boolean;
+  gpu_count?: number;
+  device_list?: string[];
+  multi_gpu_scaling_efficiency?: number;
+  pooled_vram_total_mb?: number;
 }
 
 

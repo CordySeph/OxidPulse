@@ -78,8 +78,9 @@ pub async fn run_ram_benchmark() -> Result<RamBenchmarkResult, String> {
 #[tauri::command]
 pub async fn run_gpu_ai_benchmark(
     duration_secs: Option<u64>,
+    gpu_target: Option<String>,
 ) -> Result<GpuAiBenchmarkResult, String> {
-    benchmark::run_gpu_ai_benchmark(duration_secs).await
+    benchmark::run_gpu_ai_benchmark(duration_secs, gpu_target).await
 }
 
 

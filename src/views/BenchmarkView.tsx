@@ -3,6 +3,7 @@ import {
   CpuBenchmarkResult,
   DiskSpeedTestResult,
   GpuAiBenchmarkResult,
+  GpuDeviceMetrics,
   LogicalVolumeInfo,
   RamBenchmarkResult,
   StorageDriveMetrics,
@@ -62,7 +63,8 @@ interface BenchmarkViewProps {
 
   isGpuAiBenchRunning: boolean;
   gpuAiResult?: GpuAiBenchmarkResult;
-  onRunGpuAiBench: (durationSecs: number) => void;
+  onRunGpuAiBench: (durationSecs: number, target: string) => void;
+  gpuDevices?: GpuDeviceMetrics[];
 
   isStressRunning: boolean;
   stressResult?: StressTestResult;
@@ -95,6 +97,7 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
   isGpuAiBenchRunning,
   gpuAiResult,
   onRunGpuAiBench,
+  gpuDevices = [],
   isStressRunning,
   stressResult,
   onRunStress,
@@ -106,6 +109,7 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
   const [testSizeMb, setTestSizeMb] = useState<number>(256);
   const [stressDuration, setStressDuration] = useState<number>(10);
   const [aiDuration, setAiDuration] = useState<number>(10);
+  const [selectedGpuTarget, setSelectedGpuTarget] = useState<string>('auto');
 
   // Local persistent state
   const [displayedCpuResult, setDisplayedCpuResult] = useState<CpuBenchmarkResult | undefined>(cpuResult);
@@ -466,6 +470,46 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
                   Measures sustained GEMM Matrix Multiplication TFLOPS, evaluates memory bus bandwidth saturation, simulates token rates for DeepSeek-R1 & LLaMA-3, and calculates VRAM layer allocation.
                 </p>
 
+                {/* Multi-GPU Target Selector (if 2+ GPUs detected) */}
+                {gpuDevices.length > 1 && (
+                  <div className="mt-4 pt-3 border-t border-slate-800/80">
+                    <div className="text-[11px] font-mono text-purple-300 font-bold mb-2 flex items-center space-x-1.5">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Select Target GPU / Cluster Mode:</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => setSelectedGpuTarget('all')}
+                        disabled={isGpuAiBenchRunning}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                          selectedGpuTarget === 'all'
+                            ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-slate-950 font-black shadow-lg shadow-purple-500/25'
+                            : 'bg-slate-800/80 text-purple-300 border border-purple-500/30 hover:bg-purple-950/40'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>⚡ All GPUs Combined (Swarm Mode)</span>
+                      </button>
+
+                      {gpuDevices.map((g, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedGpuTarget(String(idx))}
+                          disabled={isGpuAiBenchRunning}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                            selectedGpuTarget === String(idx)
+                              ? 'bg-purple-500 text-slate-950 font-black shadow-md shadow-purple-500/30'
+                              : 'bg-slate-800/80 text-slate-400 hover:text-white border border-slate-700/50'
+                          }`}
+                        >
+                          <Gauge className="w-3.5 h-3.5" />
+                          <span>[GPU {idx}] {g.name} ({g.memory_total_mb} MB)</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Duration / Average Pass Selector */}
                 <div className="mt-4 flex flex-wrap items-center gap-1.5">
                   <span className="text-[11px] font-mono text-slate-400 font-bold mr-1">Duration / Pass Average:</span>
@@ -493,7 +537,7 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
               </div>
 
               <button
-                onClick={() => onRunGpuAiBench(aiDuration)}
+                onClick={() => onRunGpuAiBench(aiDuration, selectedGpuTarget)}
                 disabled={isGpuAiBenchRunning}
                 className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-400 hover:opacity-95 active:scale-95 text-slate-950 font-black text-xs flex items-center justify-center space-x-2.5 cursor-pointer transition shadow-xl shadow-purple-500/25 disabled:opacity-50 shrink-0"
               >
@@ -529,8 +573,13 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
                         <Award className="w-5 h-5 text-slate-950 font-black" />
                       </div>
                       <div>
-                        <div className="text-[11px] text-purple-300 font-mono font-bold uppercase tracking-wider">
-                          AI Neural Capability Score
+                        <div className="text-[11px] text-purple-300 font-mono font-bold uppercase tracking-wider flex items-center space-x-2">
+                          <span>AI Neural Capability Score</span>
+                          {displayedGpuAiResult.is_combined_mode && (
+                            <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 text-slate-950 font-black text-[9px]">
+                              ⚡ Multi-GPU Swarm Cluster ({displayedGpuAiResult.gpu_count}x Pooled)
+                            </span>
+                          )}
                         </div>
                         <h3 className="text-xl font-bold text-white mt-0.5">
                           {displayedGpuAiResult.gpu_name || 'Graphics Device'}
@@ -543,22 +592,39 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
                         {displayedGpuAiResult.architecture || 'DirectX GPU'}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
-                        {(displayedGpuAiResult.memory_bandwidth_gb_s ?? 336.5).toFixed(1)} GB/s ({(displayedGpuAiResult.memory_bus_width_bits ?? 384)}-bit)
+                        {(displayedGpuAiResult.memory_bandwidth_gb_s ?? 0).toFixed(1)} GB/s ({(displayedGpuAiResult.memory_bus_width_bits ?? 0)}-bit)
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-bold">
-                        {displayedGpuAiResult.vram_total_mb ?? 6144} MB VRAM
+                        {displayedGpuAiResult.is_combined_mode ? `Pooled VRAM: ${displayedGpuAiResult.vram_total_mb ?? 0} MB` : `${displayedGpuAiResult.vram_total_mb ?? 0} MB VRAM`}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
-                        {displayedGpuAiResult.compute_cores ?? 2816} CUDA Cores
+                        {displayedGpuAiResult.compute_cores ?? 0} Cores
                       </span>
+                      {displayedGpuAiResult.multi_gpu_scaling_efficiency && (
+                        <span className="px-3 py-1 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+                          {((displayedGpuAiResult.multi_gpu_scaling_efficiency) * 100).toFixed(0)}% Parallel Scaling
+                        </span>
+                      )}
                     </div>
+
+                    {/* Participating Device List when in Multi-GPU Combined mode */}
+                    {displayedGpuAiResult.is_combined_mode && displayedGpuAiResult.device_list && (
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                        <span className="text-slate-400 font-bold">Participating Hardware:</span>
+                        {displayedGpuAiResult.device_list.map((dev, i) => (
+                          <span key={i} className="px-2.5 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                            #{i + 1} {dev}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {/* AI Recommendation Banner */}
                     <div className="mt-4 p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 flex items-start space-x-2.5">
                       <Bot className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                       <div className="leading-relaxed">
                         <span className="font-bold text-purple-300">AI Diagnostic Verdict: </span>
-                        {displayedGpuAiResult.ai_recommendation || 'รองรับการรันโมเดล Local LLM ในระดับ 7B-8B ได้อย่างมีประสิทธิภาพ'}
+                        {displayedGpuAiResult.ai_recommendation || 'รองรับการรันโมเดล Local LLM ในระดับมาตรฐาน'}
                       </div>
                     </div>
                   </div>
@@ -569,10 +635,10 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
                       AI Composite Index
                     </div>
                     <div className="my-2 text-4xl lg:text-5xl font-black font-mono bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent">
-                      {(displayedGpuAiResult.ai_composite_score ?? 7289).toLocaleString()}
+                      {(displayedGpuAiResult.ai_composite_score ?? 0).toLocaleString()}
                     </div>
                     <div className="inline-block px-3 py-1 rounded-full text-[11px] font-bold font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      {displayedGpuAiResult.ai_tier || 'Solid 7B/8B Local AI Workstation'}
+                      {displayedGpuAiResult.ai_tier || 'AI Neural Accelerator'}
                     </div>
                   </div>
                 </div>
@@ -582,28 +648,28 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
                     <div className="text-slate-400 text-[10px] uppercase">GPU Live Temp</div>
                     <div className="text-base font-bold text-emerald-400 mt-0.5">
-                      {(displayedGpuAiResult.live_temp_celsius ?? 45).toFixed(1)}°C
+                      {(displayedGpuAiResult.live_temp_celsius ?? 0).toFixed(1)}°C
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
                     <div className="text-slate-400 text-[10px] uppercase">Live Power Draw</div>
                     <div className="text-base font-bold text-cyan-300 mt-0.5">
-                      {displayedGpuAiResult.live_power_watts ? `${displayedGpuAiResult.live_power_watts.toFixed(1)} W` : '20 W (P8)'}
+                      {displayedGpuAiResult.live_power_watts ? `${displayedGpuAiResult.live_power_watts.toFixed(1)} W` : '—'}
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
                     <div className="text-slate-400 text-[10px] uppercase">VRAM In-Use / Free</div>
                     <div className="text-base font-bold text-indigo-300 mt-0.5">
-                      {displayedGpuAiResult.vram_used_mb ?? 1389} / {displayedGpuAiResult.vram_free_mb ?? 4755} MB
+                      {displayedGpuAiResult.vram_used_mb ?? 0} / {displayedGpuAiResult.vram_free_mb ?? 0} MB
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
                     <div className="text-slate-400 text-[10px] uppercase">GEMM Multiply Latency</div>
                     <div className="text-base font-bold text-purple-300 mt-0.5">
-                      {(displayedGpuAiResult.matrix_gemm_time_ms ?? 28).toFixed(1)} ms
+                      {(displayedGpuAiResult.matrix_gemm_time_ms ?? 0).toFixed(1)} ms
                     </div>
                   </div>
                 </div>
