@@ -5,27 +5,27 @@ pub fn get_power_throttling_diagnostics() -> PowerThrottlingMetrics {
     let thermals = crate::diagnostics::sensors::get_thermal_and_gpu_diagnostics();
     let cpu_info = crate::diagnostics::system_info::get_cpu_diagnostics();
 
-    let cpu_temp = thermals.cpu_package_temp;
-    let is_thermal_throttling = cpu_temp >= 95.0 || thermals.is_thermal_throttling;
+    let cpu_temp: f32 = thermals.cpu_package_temp;
+    let is_thermal_throttling: bool = cpu_temp >= 95.0 || thermals.is_thermal_throttling;
 
     // Estimate dynamic package power from CPU load and architecture baselines
-    let cpu_usage = cpu_info.global_usage_percent as f64;
+    let cpu_usage: f64 = cpu_info.global_usage_percent as f64;
     let base_tdp: f64 = 45.0; // Standard nominal package TDP
-    let cpu_package_power = ((base_tdp * (0.2 + (cpu_usage / 100.0) * 0.8)) * 10.0).round() / 10.0;
+    let cpu_package_power: f64 = ((base_tdp * (0.2 + (cpu_usage / 100.0) * 0.8)) * 10.0).round() / 10.0;
 
-    let gpu_power = thermals
+    let gpu_power: f64 = thermals
         .gpu_devices
         .first()
         .and_then(|g| g.power_usage_watts)
         .map(|w| w as f64)
         .unwrap_or(35.0);
 
-    let is_power_limit = cpu_usage > 90.0 && cpu_temp < 88.0;
-    let is_current_edp = cpu_usage > 95.0;
-    let is_voltage_limit = false;
+    let is_power_limit: bool = cpu_usage > 90.0 && cpu_temp < 88.0;
+    let is_current_edp: bool = cpu_usage > 95.0;
+    let is_voltage_limit: bool = false;
 
-    let mut flags = Vec::new();
-    let mut recs = Vec::new();
+    let mut flags: Vec<String> = Vec::new();
+    let mut recs: Vec<String> = Vec::new();
 
     if is_thermal_throttling {
         flags.push("PROCHOT / Thermal Limit Tripped (CPU > 95°C)".to_string());
@@ -42,7 +42,7 @@ pub fn get_power_throttling_diagnostics() -> PowerThrottlingMetrics {
         recs.push("Power delivery and VRM temperatures are within safe operating parameters.".to_string());
     }
 
-    let overall_status = if is_thermal_throttling {
+    let overall_status: String = if is_thermal_throttling {
         "Thermal Throttling Active".to_string()
     } else if is_power_limit {
         "Power Limit (Max Throughput)".to_string()
@@ -50,7 +50,7 @@ pub fn get_power_throttling_diagnostics() -> PowerThrottlingMetrics {
         "Nominal Power Delivery".to_string()
     };
 
-    let vrm_temp = (cpu_temp * 0.85).max(38.0);
+    let vrm_temp: f32 = (cpu_temp * 0.85).max(38.0);
 
     PowerThrottlingMetrics {
         cpu_package_power_watts: cpu_package_power,
@@ -62,7 +62,7 @@ pub fn get_power_throttling_diagnostics() -> PowerThrottlingMetrics {
         psu_12v_rail_status: "12.06 V (Nominal ±1%)".to_string(),
         psu_5v_rail_status: "5.04 V (Nominal ±1%)".to_string(),
         psu_3v3_rail_status: "3.32 V (Nominal ±1%)".to_string(),
-        vrm_temperature_celsius: (vrm_temp * 10.0).round() / 10.0,
+        vrm_temperature_celsius: ((vrm_temp * 10.0).round() / 10.0) as f32,
         overall_power_status: overall_status,
         throttling_flags: flags,
         recommendations: recs,
