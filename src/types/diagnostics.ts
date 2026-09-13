@@ -269,10 +269,16 @@ export interface DiskSpeedTestResult {
   test_size_mb: number;
   seq_read_mb_s: number;
   seq_write_mb_s: number;
+  seq_q1t1_read_mb_s?: number;
+  seq_q1t1_write_mb_s?: number;
   random_4k_read_mb_s: number;
   random_4k_read_iops: number;
   random_4k_write_mb_s: number;
   random_4k_write_iops: number;
+  random_4k_q1t1_read_mb_s?: number;
+  random_4k_q1t1_read_iops?: number;
+  random_4k_q1t1_write_mb_s?: number;
+  random_4k_q1t1_write_iops?: number;
   access_latency_ms: number;
   drive_tier: string;
 }
