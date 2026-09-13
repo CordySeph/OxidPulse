@@ -31,7 +31,8 @@ pub fn run() {
             open_file_folder,
             launch_windows_tool,
             get_dpc_latency_metrics,
-            run_ram_integrity_test
+            run_ram_integrity_test,
+            get_network_diagnostics
         ])
 
         .run(tauri::generate_context!())

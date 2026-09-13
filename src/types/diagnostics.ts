@@ -329,6 +329,28 @@ export interface DpcLatencyMetrics {
   recommendations: string[];
 }
 
+export interface DnsServerSpeed {
+  provider: string;
+  ip: string;
+  latency_ms: number;
+  status: string;
+}
+
+export interface NetworkDiagnosticsResult {
+  ping_ms: number;
+  min_latency_ms: number;
+  max_latency_ms: number;
+  jitter_ms: number;
+  packet_loss_pct: number;
+  gaming_grade: string;
+  streaming_grade: string;
+  dns_results: DnsServerSpeed[];
+  recommended_dns: string;
+  connection_type: string;
+  local_ip: string;
+  gateway_ip: string;
+}
+
 export interface PrecisionComputeThroughput {
   precision: string;
   tflops: number;

@@ -371,6 +371,30 @@ pub struct DpcLatencyMetrics {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DnsServerSpeed {
+    pub provider: String,
+    pub ip: String,
+    pub latency_ms: f64,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkDiagnosticsResult {
+    pub ping_ms: f64,
+    pub min_latency_ms: f64,
+    pub max_latency_ms: f64,
+    pub jitter_ms: f64,
+    pub packet_loss_pct: f64,
+    pub gaming_grade: String,
+    pub streaming_grade: String,
+    pub dns_results: Vec<DnsServerSpeed>,
+    pub recommended_dns: String,
+    pub connection_type: String,
+    pub local_ip: String,
+    pub gateway_ip: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrecisionComputeThroughput {
     pub precision: String,
     pub tflops: f64,

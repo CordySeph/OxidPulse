@@ -1,5 +1,5 @@
 use crate::models::*;
-use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark, latency, memory_test};
+use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark, latency, memory_test, network};
 
 #[tauri::command]
 pub fn get_battery_metrics() -> Result<BatterySnapshot, String> {
@@ -91,6 +91,11 @@ pub async fn run_ram_integrity_test(
     passes: Option<u32>,
 ) -> Result<RamIntegrityTestResult, String> {
     memory_test::run_ram_integrity_test(test_size_mb, passes).await
+}
+
+#[tauri::command]
+pub async fn get_network_diagnostics() -> NetworkDiagnosticsResult {
+    network::get_network_diagnostics().await
 }
 
 #[tauri::command]

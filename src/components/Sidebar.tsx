@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Sliders,
   Layers,
+  Globe,
 } from 'lucide-react';
 
 export type TabType =
@@ -105,6 +106,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'RAM Integrity Stress',
       description: 'Bit-Flip & XMP Stability',
       icon: <Layers className="w-4 h-4" />,
+    },
+    {
+      id: 'network',
+      label: 'Network & Jitter',
+      description: 'DNS Speed & Gaming Grade',
+      icon: <Globe className="w-4 h-4" />,
     },
     {
       id: 'crash_logs',

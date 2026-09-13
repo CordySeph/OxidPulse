@@ -29,6 +29,7 @@ import { BenchmarkView } from './views/BenchmarkView';
 import { PeripheralsView } from './views/PeripheralsView';
 import { LatencyView } from './views/LatencyView';
 import { MemoryTestView } from './views/MemoryTestView';
+import { NetworkView } from './views/NetworkView';
 import { CrashDumpView } from './views/CrashDumpView';
 import { ReportView } from './views/ReportView';
 
@@ -313,6 +314,8 @@ export function App() {
                 {activeTab === 'latency' && <LatencyView />}
 
                 {activeTab === 'memory_test' && <MemoryTestView />}
+
+                {activeTab === 'network' && <NetworkView />}
 
                 {activeTab === 'crash_logs' && (
                   <CrashDumpView crashInfo={crashDump} />
