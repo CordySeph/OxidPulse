@@ -32,7 +32,8 @@ pub fn run() {
             launch_windows_tool,
             get_dpc_latency_metrics,
             run_ram_integrity_test,
-            get_network_diagnostics
+            get_network_diagnostics,
+            get_power_throttling_diagnostics
         ])
 
         .run(tauri::generate_context!())

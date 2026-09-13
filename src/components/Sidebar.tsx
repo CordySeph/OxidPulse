@@ -114,6 +114,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <Globe className="w-4 h-4" />,
     },
     {
+      id: 'power',
+      label: 'Power Delivery & Limits',
+      description: 'PROCHOT & Voltage Rails',
+      icon: <Zap className="w-4 h-4" />,
+    },
+    {
       id: 'crash_logs',
       label: 'Stability & Integrity',
       description: 'Hardware vs OS Audit',

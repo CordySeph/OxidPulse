@@ -395,6 +395,23 @@ pub struct NetworkDiagnosticsResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PowerThrottlingMetrics {
+    pub cpu_package_power_watts: f64,
+    pub gpu_power_watts: f64,
+    pub is_thermal_throttling: bool,
+    pub is_power_limit_throttling: bool,
+    pub is_current_edp_throttling: bool,
+    pub is_voltage_reliability_limit: bool,
+    pub psu_12v_rail_status: String,
+    pub psu_5v_rail_status: String,
+    pub psu_3v3_rail_status: String,
+    pub vrm_temperature_celsius: f32,
+    pub overall_power_status: String,
+    pub throttling_flags: Vec<String>,
+    pub recommendations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrecisionComputeThroughput {
     pub precision: String,
     pub tflops: f64,

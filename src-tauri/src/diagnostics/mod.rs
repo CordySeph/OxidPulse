@@ -10,6 +10,7 @@ pub mod benchmark;
 pub mod latency;
 pub mod memory_test;
 pub mod network;
+pub mod power;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;

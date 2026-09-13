@@ -30,6 +30,7 @@ import { PeripheralsView } from './views/PeripheralsView';
 import { LatencyView } from './views/LatencyView';
 import { MemoryTestView } from './views/MemoryTestView';
 import { NetworkView } from './views/NetworkView';
+import { PowerView } from './views/PowerView';
 import { CrashDumpView } from './views/CrashDumpView';
 import { ReportView } from './views/ReportView';
 
@@ -316,6 +317,8 @@ export function App() {
                 {activeTab === 'memory_test' && <MemoryTestView />}
 
                 {activeTab === 'network' && <NetworkView />}
+
+                {activeTab === 'power' && <PowerView />}
 
                 {activeTab === 'crash_logs' && (
                   <CrashDumpView crashInfo={crashDump} />

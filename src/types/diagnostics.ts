@@ -351,6 +351,22 @@ export interface NetworkDiagnosticsResult {
   gateway_ip: string;
 }
 
+export interface PowerThrottlingMetrics {
+  cpu_package_power_watts: number;
+  gpu_power_watts: number;
+  is_thermal_throttling: boolean;
+  is_power_limit_throttling: boolean;
+  is_current_edp_throttling: boolean;
+  is_voltage_reliability_limit: boolean;
+  psu_12v_rail_status: string;
+  psu_5v_rail_status: string;
+  psu_3v3_rail_status: string;
+  vrm_temperature_celsius: number;
+  overall_power_status: string;
+  throttling_flags: string[];
+  recommendations: string[];
+}
+
 export interface PrecisionComputeThroughput {
   precision: string;
   tflops: number;
