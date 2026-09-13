@@ -1,5 +1,5 @@
 use crate::models::*;
-use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark, latency};
+use crate::diagnostics::{battery, storage, system_info, sensors, stress, crash_dump, scoring, report, benchmark, latency, memory_test};
 
 #[tauri::command]
 pub fn get_battery_metrics() -> Result<BatterySnapshot, String> {
@@ -84,6 +84,14 @@ pub async fn run_gpu_ai_benchmark(
 }
 
 
+
+#[tauri::command]
+pub async fn run_ram_integrity_test(
+    test_size_mb: Option<u64>,
+    passes: Option<u32>,
+) -> Result<RamIntegrityTestResult, String> {
+    memory_test::run_ram_integrity_test(test_size_mb, passes).await
+}
 
 #[tauri::command]
 pub fn get_dpc_latency_metrics(sample_duration_ms: Option<u64>) -> DpcLatencyMetrics {

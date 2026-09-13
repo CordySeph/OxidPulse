@@ -28,6 +28,7 @@ import { ThermalGpuView } from './views/ThermalGpuView';
 import { BenchmarkView } from './views/BenchmarkView';
 import { PeripheralsView } from './views/PeripheralsView';
 import { LatencyView } from './views/LatencyView';
+import { MemoryTestView } from './views/MemoryTestView';
 import { CrashDumpView } from './views/CrashDumpView';
 import { ReportView } from './views/ReportView';
 
@@ -310,6 +311,8 @@ export function App() {
                 {activeTab === 'peripherals' && <PeripheralsView />}
 
                 {activeTab === 'latency' && <LatencyView />}
+
+                {activeTab === 'memory_test' && <MemoryTestView />}
 
                 {activeTab === 'crash_logs' && (
                   <CrashDumpView crashInfo={crashDump} />

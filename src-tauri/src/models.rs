@@ -329,6 +329,18 @@ pub struct RamBenchmarkResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RamIntegrityTestResult {
+    pub total_mb_tested: u64,
+    pub passes_completed: u32,
+    pub errors_detected: u64,
+    pub memory_bandwidth_gb_s: f64,
+    pub duration_seconds: f64,
+    pub status: String,
+    pub is_passed: bool,
+    pub tested_patterns: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FullSystemBenchmarkResult {
     pub cpu: CpuBenchmarkResult,
     pub disk: Option<DiskSpeedTestResult>,

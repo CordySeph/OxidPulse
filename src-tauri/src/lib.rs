@@ -30,7 +30,8 @@ pub fn run() {
             save_printable_report_html,
             open_file_folder,
             launch_windows_tool,
-            get_dpc_latency_metrics
+            get_dpc_latency_metrics,
+            run_ram_integrity_test
         ])
 
         .run(tauri::generate_context!())

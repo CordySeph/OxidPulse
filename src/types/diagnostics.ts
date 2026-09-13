@@ -291,6 +291,17 @@ export interface RamBenchmarkResult {
   tier: string;
 }
 
+export interface RamIntegrityTestResult {
+  total_mb_tested: number;
+  passes_completed: number;
+  errors_detected: number;
+  memory_bandwidth_gb_s: number;
+  duration_seconds: number;
+  status: string;
+  is_passed: boolean;
+  tested_patterns: string[];
+}
+
 export interface FullSystemBenchmarkResult {
   cpu: CpuBenchmarkResult;
   disk?: DiskSpeedTestResult;

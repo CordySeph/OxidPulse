@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Sliders,
+  Layers,
 } from 'lucide-react';
 
 export type TabType =
@@ -98,6 +99,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'DPC Latency Monitor',
       description: 'Audio Glitch & Stutter',
       icon: <Sliders className="w-4 h-4" />,
+    },
+    {
+      id: 'memory_test',
+      label: 'RAM Integrity Stress',
+      description: 'Bit-Flip & XMP Stability',
+      icon: <Layers className="w-4 h-4" />,
     },
     {
       id: 'crash_logs',
